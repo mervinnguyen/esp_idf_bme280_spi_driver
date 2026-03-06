@@ -1,4 +1,4 @@
-# BME280 SPI Driver for ESP-IDF
+# ESP-IDF BME280 SPI Driver (C++)
 
 ## Overview
 
