@@ -43,4 +43,17 @@ void BME280::get_calibration_data(void){
     register_read(ADDR_DIG_H2, (uint8_t*)&(calibration_data.dig_H2), CAL_SIZE_2_BYTE);
     register_read(ADDR_DIG_H3, (uint8_t*)&(calibration_data.dig_H3), CAL_SIZE_1_BYTE);
 
+    register_read(ADDR_DIG_H4, (uint8_t*)&(calibration_data.dig_H4), CAL_SIZE_2_BYTE);
+    calibration_data.dig_H4 = ((calibration_data.dig_H4 >> 8u) & 0xF) |
+                              ((calibration_data.dig_H4 & 0xFF) << 4u);
+
+    register_read(ADDR_DIG_H5, (uint8_t*)&(calibration_data.dig_H5), CAL_SIZE_2_BYTE);
+    calibration_data.dig_H5 = (((calibration_data.dig_H5 & 0xF) << 4u) |
+                                (calibration_data.dig_H5 & 0xFF00)) >> 4u;
+
+    register_read(ADDR_DIG_H6, (uint8_t*)&(calibration_data.dig_H6), CAL_SIZE_1_BYTE);
+}
+
+void BME280::clear_all_registers(void){
+    uint8_t tx_buffer
 }
