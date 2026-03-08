@@ -30,6 +30,10 @@ spi_bus_config_t buscfg = {
     .data5_io_num = -1,                 // Extra data line 5 (disabled - not using Quad SPI)
     .data6_io_num = -1,                 // Extra data line 6 (disabled - not using Quad SPI)
     .data7_io_num = -1,                 // Extra data line 7 (disabled - not using Quad SPI)
+    .max_transfer_sz = 32,              // Maximum transfer size in bytes (sufficient for register read/write operations)
+    .flags = 0,                         // No special flags needed for standard SPI operation
+    .intr_flags = 0,                    // No special interrupt flags needed for this application
+    .isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO, // Automatically assign CPU for SPI interrupts
 };
 
 // SPI Device Interface Configuration: Defines BME280 device-specific settings
@@ -40,20 +44,20 @@ spi_device_interface_config_t devcfg = {
     .mode = 0,                              // SPI Mode 0 (CPOL=0, CPHA=0) - correct for BME280
     .clock_source = SPI_CLK_SRC_DEFAULT,    // Use default clock source
     .duty_cycle_pos = 128,                  // 50% duty cycle (clock high/low equal time)
-    .cs_ena_pretrans = 0,                   // No CS enable delay before transmission
+    .cs_ena_pretrans = 1,                   // No CS enable delay before transmission
     .cs_ena_posttrans = 0,                  // No CS enable delay after transmission
-    .clock_speed_hz = 10 * 1000 * 1000,     // 10 MHz clock speed (within BME280's 10 MHz max)
+    .clock_speed_hz = 1000000,              // 10 MHz clock speed (within BME280's 10 MHz max)
     .input_delay_ns = 0,                    // No input delay compensation
     .spics_io_num = PIN_NUM_CS,             // GPIO 5: Chip Select pin for BME280
     .flags = 0,                             // No special flags (standard SPI operation)
-    .queue_size = 3,                        // Allow 3 SPI transactions to be queued
+    .queue_size = 7,                        // Allow 7 SPI transactions to be queued
     .pre_cb = 0,                            // No callback before transaction
     .post_cb = 0,                           // No callback after transaction
 };
 
 void task_forced_mode(void *pvParameters){
     spi_device_handle_t spi_dev;
-    BME280 bme(devcfg, buscfg, spidev);
+    BME280 bme(devcfg, buscfg, spi_dev);
 
     // Reset all BME280 registers to their default values
     bme.clear_all_register();
