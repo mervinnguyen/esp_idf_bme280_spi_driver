@@ -22,7 +22,7 @@
  * 
  * @note Uses VSPI_HOST (SPI3) on ESP32 with DMA channel 1 for data transfers
  */
-BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev) : devcfg{ devcfg }, buscfg{busconfig}, spi_dev{spi_dev} 
+BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev) : dev_cfg{dev_cfg}, bus_cfg{bus_config}, spi_dev{spi_dev} 
 {
     // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
     // DMA channel is set to 1 for efficient DMA-based transfers
@@ -117,22 +117,22 @@ void BME280::clear_all_registers(void){
     // Send pairs of (register address, value) where register is write-only
     // Each write operation is: [address with write bit, data byte]
     // Total of 6 bytes: 3 registers × (address + data)
-    uint8_t tx_buffer[6u] = 
+    uint8_t tx_buffer[6] = 
     {
         // First register: CTRL_MEAS with write-only mask applied to address
         CTRL_MEAS & REG_WRITE_ONLY,
         // Value to write: 0x00 (puts sensor into sleep mode, disables measurements)
-        0x00u,
+        0x00,
         
         // Second register: CONFIG with write-only mask
         CONFIG & REG_WRITE_ONLY,
         // Value to write: 0x00 (sets filter off, no standby delay)
-        0x00u,
+        0x00,
         
         // Third register: CTRL_HUM with write-only mask
         CTRL_HUM & REG_WRITE_ONLY,
         // Value to write: 0x00 (humidity oversampling disabled)
-        0x00u,
+        0x00,
     };
 
     // ===== Configure SPI Transaction =====
@@ -146,9 +146,9 @@ void BME280::clear_all_registers(void){
         // Address phase: Not used in this implementation
         .addr = 0,
         // Length: 6 bytes × 8 bits = 48 bits of data to transmit
-        .length = 8u * 6u,
+        .length = 8 * 6,
         // RX length: 0 - This is a write-only operation (no read back)
-        .rxlength = 0u,
+        .rxlength = 0,
         // User data: NULL - No context data needed for this transaction
         .user = NULL,
         // Transmit buffer: Points to our tx_buffer containing addresses and values
@@ -169,3 +169,50 @@ void BME280::clear_all_registers(void){
     // Critical for systems with multiple SPI devices on the same bus
     spi_device_release_bus(spi_dev);
 }
+
+void BME280::register_write(){
+
+}
+
+void BME280::register_read(){
+
+}
+
+void BME280::burst_read_data(){
+
+}
+
+void BME280::sample_data(){
+
+}
+
+void BME280::pressure_oversample(oversample_e os){
+
+}
+
+void BME280::humidity_oversample(oversample_e os){
+
+}
+
+void BME280::temperature_oversample(oversample_e os){
+
+}
+
+void BME280::set_force_mode(void){
+
+}
+
+void BME280::set_normal_mode(void){
+
+}
+
+BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
+
+}
+
+BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
+
+}
+
+
+
