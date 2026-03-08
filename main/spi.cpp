@@ -10,7 +10,7 @@
 #include "freertos/task.h"
 #include "soc/clk_tree_defs.h"
 
-#include "bme280.h"
+#include "bme280.hpp"
 
 extern "C" { void app_main(); }
 
@@ -34,9 +34,9 @@ spi_bus_config_t buscfg = {
 
 // SPI Device Interface Configuration: Defines BME280 device-specific settings
 spi_device_interface_config_t devcfg = {
-    .command_bits = 0u,                     // No command phase (BME280 uses register address as first byte)
-    .address_bits = 0u,                     // No address phase (address embedded in data)
-    .dummy_bits = 0u,                       // No dummy bits needed for BME280
+    .command_bits = 0,                     // No command phase (BME280 uses register address as first byte)
+    .address_bits = 0,                     // No address phase (address embedded in data)
+    .dummy_bits = 0,                       // No dummy bits needed for BME280
     .mode = 0,                              // SPI Mode 0 (CPOL=0, CPHA=0) - correct for BME280
     .clock_source = SPI_CLK_SRC_DEFAULT,    // Use default clock source
     .duty_cycle_pos = 128,                  // 50% duty cycle (clock high/low equal time)
