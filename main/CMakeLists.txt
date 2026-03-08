@@ -1,4 +1,4 @@
 idf_component_register(
-    SRCS "spi.cpp"
-    REQUIRES bme280
+    SRCS "spi.cpp" "bme280.cpp"
+    INCLUDE_DIRS "."
 )
