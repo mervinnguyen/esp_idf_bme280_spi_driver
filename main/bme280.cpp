@@ -170,12 +170,14 @@ void BME280::clear_all_registers(void){
     spi_device_release_bus(spi_dev);
 }
 
-void BME280::register_write(){
+void BME280::register_write(const uint8_t address, const uint8_t data){
 
 }
 
 void BME280::register_read(){
-
+    //create a transmit buffer with register addressa and data (1 byte)
+    uint8_t tx_buffer[2];   
+    
 }
 
 void BME280::burst_read_data(){
