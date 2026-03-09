@@ -170,11 +170,7 @@ void BME280::clear_all_registers(void){
     spi_device_release_bus(spi_dev);
 }
 
-void BME280::register_write(const uint8_t address, const uint8_t data){
-
-}
-
-void BME280::register_read(){
+void BME280::register_write(uint8_t address, uint8_t data){
     //create a transmit buffer with register addressa and data (1 byte)
     uint8_t tx_buffer[2];   
 
@@ -183,6 +179,30 @@ void BME280::register_read(){
 
     //Send the data from sensor to buffer
     tx_buffer[1] = data;
+
+    //Create SPI transaction structure
+    spi_transaction_t trans;
+
+    //clear structure fields
+    memset(&trans, 0, sizeof(spi_transaction_t));
+
+    //Number of bits to transmit (2 bytes = 16 bits)
+    trans.length = 16;
+
+    //Assign transmit buffer
+    trans.tx_buffer = tx_buffer;
+
+    //No receive buffer needed for writing to register
+    trans.rx_buffer = 0;
+
+    //Acquire SPI bus so other tasks can't access it
+    spi_device_acquire_bus(spi_dev, portMAX_DELAY);
+
+
+}
+
+void BME280::register_read(const uint8_t address, const uint8_t data){
+
 }
 
 void BME280::burst_read_data(){
