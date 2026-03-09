@@ -175,7 +175,7 @@ void BME280::register_write(uint8_t address, uint8_t data){
     uint8_t tx_buffer[2];   
 
     //Mask the address for write operations
-    tx_buffer[0] = address | REG_READ_ONLY; // Set MSB to 1 for read operations
+    tx_buffer[0] = address | REG_READ_ONLY;
 
     //Send the data from sensor to buffer
     tx_buffer[1] = data;
@@ -198,7 +198,11 @@ void BME280::register_write(uint8_t address, uint8_t data){
     //Acquire SPI bus so other tasks can't access it
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
 
+    //Send transaction
+    spi_device_transmit(spi_dev, &trans);
 
+    //Release SPI bus
+    spi_device_release_bus(spi_dev);
 }
 
 void BME280::register_read(const uint8_t address, const uint8_t data){
