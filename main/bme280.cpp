@@ -205,7 +205,7 @@ void BME280::register_write(uint8_t address, uint8_t data){
     spi_device_release_bus(spi_dev);
 }
 
-void BME280::register_read(const uint8_t address, const uint8_t data, uint8_t *buffer){
+void BME280::register_read(const uint8_t address, const uint8_t size, uint8_t *buffer){
     //Create transmit and receive buffers
     uint8_t tx_buffer[MAX_TX_BUFFER_SIZE] = {0};
     uint8_t rx_buffer[MAX_RX_BUFFER_SIZE] = {0};
@@ -213,7 +213,31 @@ void BME280::register_read(const uint8_t address, const uint8_t data, uint8_t *b
     //Set register address with read flag
     tx_buffer[0] = address | REG_READ_ONLY;
 
-    
+    //Create SPI transaction struct
+    spi_transaction_t trans;
+
+    //Clear the structure
+    memset(&trans, 0, sizeof(spi_transaction_t));
+
+    //Total bits to send and recieve (address + data)
+    trans.length = 8 * (1 + size); // 1 byte for address + size bytes for data 
+    trans.rxlength = 8 * (size + 1); // Only the data bytes are expected in response
+
+    //Assign buffers
+    trans.tx_buffer = tx_buffer;
+    trans.rx_buffer = rx_buffer;
+
+    //Acquire SPI bus for exclusive access
+    spi_device_acquire_bus(spi_dev, portMAX_DELAY);
+
+    //Perform SPI transaction
+    spi_device_transmit(spi_dev, &trans);
+
+    //Release SPI bus
+    spi_device_release_bus(spi_dev);
+
+    //Copy received data (skip first byte which is dummuy)
+    memcpy(buffer, &rx_buffer[1], size);
 }
 
 void BME280::burst_read_data(){
