@@ -177,7 +177,9 @@ void BME280::register_write(const uint8_t address, const uint8_t data){
 void BME280::register_read(){
     //create a transmit buffer with register addressa and data (1 byte)
     uint8_t tx_buffer[2];   
-    
+
+    //Mask the address for write operations
+    tx_buffer[0] = address & REG_READ_ONLY; // Set MSB to 1 for read operations
 }
 
 void BME280::burst_read_data(){
