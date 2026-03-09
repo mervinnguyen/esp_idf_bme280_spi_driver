@@ -179,7 +179,10 @@ void BME280::register_read(){
     uint8_t tx_buffer[2];   
 
     //Mask the address for write operations
-    tx_buffer[0] = address & REG_READ_ONLY; // Set MSB to 1 for read operations
+    tx_buffer[0] = address | REG_READ_ONLY; // Set MSB to 1 for read operations
+
+    //Send the data from sensor to buffer
+    tx_buffer[1] = data;
 }
 
 void BME280::burst_read_data(){
