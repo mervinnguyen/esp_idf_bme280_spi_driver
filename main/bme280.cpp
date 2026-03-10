@@ -244,7 +244,8 @@ void BME280::burst_read_data(void){
     //First byte is the register addreess with read bit set
     uint8_t tx_buffer = PRESS_MSB | REG_READ_ONLY;
 
-    
+    //Buffer to receive 9 bytes (1 dummy + 8 data bytes)
+    uint8_t rx_buffer[9];
 }
 
 void BME280::sample_data(){
