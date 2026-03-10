@@ -246,6 +246,13 @@ void BME280::burst_read_data(void){
 
     //Buffer to receive 9 bytes (1 dummy + 8 data bytes)
     uint8_t rx_buffer[9];
+    memset(rx_buffer, 0, sizeof(rx_buffer));
+
+    //Declare trans structure
+    spi_transaction_t trans;
+    memset(&trans, 0, sizeof(spi_transaction_t));
+
+
 }
 
 void BME280::sample_data(){
