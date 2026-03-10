@@ -252,7 +252,9 @@ void BME280::burst_read_data(void){
     spi_transaction_t trans;
     memset(&trans, 0, sizeof(spi_transaction_t));
 
-
+    trans.length = 8 * 9; // 1 byte for address + 8 bytes for data
+    trans.rxlength = 8 * 9; // 1 byte for address + 8 bytes for data
+    
 }
 
 void BME280::sample_data(){
