@@ -257,6 +257,9 @@ void BME280::burst_read_data(void){
     trans.tx_buffer = &tx_buffer;       // Transmit the starting register address
     trans.rx_buffer = rx_buffer;        // Receive buffer for dummy byte + data bytes
 
+    //Lock SPI bus
+    spi_device_acquire_bus(spi_dev, portMAX_DELAY);
+
     
 }
 
