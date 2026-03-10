@@ -254,6 +254,9 @@ void BME280::burst_read_data(void){
 
     trans.length = 8 * 9; // 1 byte for address + 8 bytes for data
     trans.rxlength = 8 * 9; // 1 byte for address + 8 bytes for data
+    trans.tx_buffer = &tx_buffer;       // Transmit the starting register address
+    trans.rx_buffer = rx_buffer;        // Receive buffer for dummy byte + data bytes
+
     
 }
 
