@@ -240,8 +240,11 @@ void BME280::register_read(const uint8_t address, const uint8_t size, uint8_t *b
     memcpy(buffer, &rx_buffer[1], size);
 }
 
-void BME280::burst_read_data(){
+void BME280::burst_read_data(void){
+    //First byte is the register addreess with read bit set
+    uint8_t tx_buffer = PRESS_MSB | REG_READ_ONLY;
 
+    
 }
 
 void BME280::sample_data(){
