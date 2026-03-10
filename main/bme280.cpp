@@ -260,7 +260,17 @@ void BME280::burst_read_data(void){
     //Lock SPI bus
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
 
-    
+    //Release SPI bus
+    spi_device_release_bus(spi_dev);
+
+    //Combine presure bytes
+    uint32_t press_msb = rx_buffer[1];
+    uint32_t press_lsb = rx_buffer[2];
+    uint32_t press_xlsb = rx_buffer[3];
+
+    uint32_t raw_pressure = (press_msb << 16) | (press_lsb << 8) | (press_xlsb);
+
+    raw_pressure >>= 4; // Pressure is 20 bits, so we need to shift right by 4 to align it
 }
 
 void BME280::sample_data(){
