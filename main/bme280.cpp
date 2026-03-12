@@ -313,6 +313,9 @@ void BME280::pressure_oversample(oversample_e os){
 
     //Shift it to correct bit position for pressure field.
     uint8_t shifted_value = oversample_value << PRESS_OVERSAMPLE_SHIFT;
+
+    //Write the updated value to the CTRL_MEAS register
+    sample_data(CTRL_MEAS, shifted_value);
 }
 
 void BME280::humidity_oversample(oversample_e os){
