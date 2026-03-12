@@ -319,6 +319,14 @@ void BME280::pressure_oversample(oversample_e os){
 }
 
 void BME280::humidity_oversample(oversample_e os){
+    //Convert the oversampling enum to a uint8_t value
+    uint8_t oversample_value = (uint8_t)os;
+
+    //Shift it to correct bit position for humidity field.
+    uint8_t shifted_value = oversample_value << HUM_OVERSAMPLE_SHIFT;
+
+    //Write the updated value to the CTRL_HUM register
+    sample_data(CTRL_HUM, shifted_value);
 
 }
 
