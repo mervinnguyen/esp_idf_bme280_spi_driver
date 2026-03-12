@@ -331,11 +331,22 @@ void BME280::humidity_oversample(oversample_e os){
 }
 
 void BME280::temperature_oversample(oversample_e os){
+    //Convert the oversampling enum to a uint8_t value
+    uint8_t oversample_value = (uint8_t)os;
 
+    //Shift it to correct bit position for temperature field.
+    uint8_t shifted_value = oversample_value << TEMP_OVERSAMPLE_SHIFT;
+
+    //Write the updated value to the CTRL_MEAS register
+    sample_data(CTRL_MEAS, shifted_value);
 }
 
 void BME280::set_force_mode(void){
+    //write data
+    uint8_t data = FORCED_MODE;
 
+    //write the data over SPI
+    register_write(CTRL_MEAS, data);
 }
 
 void BME280::set_normal_mode(void){
