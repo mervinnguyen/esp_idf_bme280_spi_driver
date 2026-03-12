@@ -293,11 +293,24 @@ void BME280::burst_read_data(void){
     humidity = hum_comp / 1024.0f;          // Humidity is in thousand
 }
 
-void BME280::sample_data(uint8_t address, uint_t &data){
+void BME280::sample_data(uint8_t address, uint8_t &data){
+    //Create variable for data buffer
+    uint8_t data_buffer = 0;
 
+    //Read the existing data register
+    register_read(address, &data_buffer, 1);
+
+    //write new data
+    data_buffer |= data;
+
+    //write data over SPI
+    register_write(address, data_buffer);
 }
 
 void BME280::pressure_oversample(oversample_e os){
+    //Convert the oversampling enum to a uint8_t value
+    uint8_t oversample_value = (uint8_t)os;
+    
 
 }
 
