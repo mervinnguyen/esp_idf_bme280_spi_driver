@@ -310,8 +310,9 @@ void BME280::sample_data(uint8_t address, uint8_t &data){
 void BME280::pressure_oversample(oversample_e os){
     //Convert the oversampling enum to a uint8_t value
     uint8_t oversample_value = (uint8_t)os;
-    
 
+    //Shift it to correct bit position for pressure field.
+    uint8_t shifted_value = oversample_value << PRESS_OVERSAMPLE_SHIFT;
 }
 
 void BME280::humidity_oversample(oversample_e os){
