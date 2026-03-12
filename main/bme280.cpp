@@ -260,6 +260,9 @@ void BME280::burst_read_data(void){
     //Lock SPI bus
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
 
+    //Perform the transaction
+    spi_device_transmit(spi_dev, &trans);
+
     //Release SPI bus
     spi_device_release_bus(spi_dev);
 
@@ -284,6 +287,10 @@ void BME280::burst_read_data(void){
     int32_t press_comp = compensate_P_int64(raw_pressure);
     int32_t hum_comp = compensate_H_int32(raw_humidity);
 
+    //Convert to floats
+    temperature = temp_comp / 100.0f;        // Temperature is in hundredths of degree Celsius
+    pressure = press_comp / 25600.0f;       // Pressure is in Pa, convert to hPa by dividing by 25600
+    humidity = hum_comp / 1024.0f;          // Humidity is in thousand
 }
 
 void BME280::sample_data(){
