@@ -293,7 +293,7 @@ void BME280::burst_read_data(void){
     humidity = hum_comp / 1024.0f;          // Humidity is in thousand
 }
 
-void BME280::sample_data(){
+void BME280::sample_data(uint8_t address, uint_t &data){
 
 }
 
