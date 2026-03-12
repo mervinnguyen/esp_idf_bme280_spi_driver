@@ -350,7 +350,11 @@ void BME280::set_force_mode(void){
 }
 
 void BME280::set_normal_mode(void){
+    //write data
+    uint8_t data = NORMAL_MODE;
 
+    //write the data over SPI
+    register_write(CTRL_MEAS, data);
 }
 
 BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
