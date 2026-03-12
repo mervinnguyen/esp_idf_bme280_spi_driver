@@ -271,6 +271,13 @@ void BME280::burst_read_data(void){
     uint32_t raw_pressure = (press_msb << 16) | (press_lsb << 8) | (press_xlsb);
 
     raw_pressure >>= 4; // Pressure is 20 bits, so we need to shift right by 4 to align it
+
+    //Combine temperature bytes
+    uint32_t temp_msb = rx_buffer[4];
+    uint32_t temp_lsb = rx_buffer[5];
+    uint32_t temp_xlsb = rx_buffer[6];
+
+    
 }
 
 void BME280::sample_data(){
