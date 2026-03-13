@@ -409,6 +409,41 @@ BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
 }
 
 BME280_U32_t BME280::compensate_H_int32(BME280_S32_t adc_H){
-    
+    BME280_S32_t humidity = 0;
+
+    //Start from temperature compensation value
+    BME280_S32_T temp_comp = t_fine - 76800;
+
+    //First part of humidity formula 
+    BME280_S32_t part1 = adc_H << 14;
+    BME280_S32_t part2 = ((BME280_S32_t)calibration_data.dig_H4) << 20;
+    BME280_S32_t part3 = calibration_data.dig_H5 * temp_comp;
+
+    BME280_S32_t intermediate = ((part1 + part2 + part3) + 16384) >> 15;
+
+    //More compensation math
+    BME280_S32_t temp1 = (temp_comp * calibration_data.dig_H6) >> 10;
+    BME280_S32_t temp2 = (temp_comp * calibration_data.dig_H3) >> 11 + 32768;
+    BME280_S32_t temp3 = ((temp1 * temp2) >> 10) + 2097152;
+    BME280_S32_t temp4 = (temp3 * calibration_data.dig_H2 + 8192) >> 14;
+
+    humidity = intermediate * temp4;
+
+    //Final correction
+    BME280_S32_t correction = (((humidity >> 15) * (humidity >> 15)) >> 7) * calibration_data.dig_H1 >> 4;
+
+    humidity = humidity - correction;
+
+    //Clamp results to a valid range
+    if (humidity < 0){
+        humidity = 0;
+    }
+
+    if (humidity > 419430400){
+        humidity = 419430400;
+    }
+
+    //Final scale
+    return (BME280_U32_t)(humidity >> 12);
 }
 
