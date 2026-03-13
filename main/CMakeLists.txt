@@ -3,5 +3,3 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES esp_driver_spi freertos
 )
-
-target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++14)

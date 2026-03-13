@@ -362,7 +362,50 @@ BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
 }
 
 BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
+    //Use 64-bit variables for precission (from datasheet)
+    BME280_S64_t var1, var2, p = 0;
 
+    //Start with temperature compensaiton value
+    var1 = (BME280_S64_t)t_fine - 128000;
+
+    //First part of pressure compensation
+    BME280_S64_t var1_squared = var1 * var1;
+
+    var2 = var1_squared * (BME280_S64_t)calibration_data.dig_P6;
+    var2 += (var1 * (BME280_S64_t)calibration_data.dig_P5) << 17;
+    var2 += ((BME280_S64_t)calibration_data.dig_P4) << 35;
+
+    //More compensation math
+    BME280_S64_t temp1 = (var1_squared * (BME280_S64_t)calibration_data.dig_P3) >> 8;
+    BME280_S64_t temp2 = (var1 * (BME280_S64_t)calibration_data.dig_P2) << 12;
+    
+    var1 = temp1 + temp2;
+
+    BME280_S64_t scale = ((BME280_S64_t)1 << 47) + var1;
+    scale = (scale * (BME280_S64_t)calibration_data.dig_P1) >> 33;
+
+    var1 = scale;
+
+    //Prevent divide by 0
+    if (var1 == 0) {
+        return 0; // Avoid division by zero
+    }
+
+    //Apply raw pressure compensation
+    pressure = 1048576 - adc_P;
+
+    pressure = ((pressure << 31) - var2) * 3125 / var1;
+
+    //Final fine adjustments
+    BME280_S64_t pressure_shift = pressure >> 13;
+
+    BME280_S64_t adjust1 = ((BME280_S64_t)calibration_data.dig_P9 * (pressure_shift * pressure_shift)) >> 25;
+    BME280_S64_t adjust2 = ((BME280_S64_t)calibration_data.dig_P8 * pressure_shift) >> 19;
+
+    pressure = pressure + adjust1 + adjust2;
+    pressure = (pressure >> 8) + ((BME280_S64_t)calibration_data.dig_P7 << 4);
+
+    return (BME280_U32_t)pressure;
 }
 
 
