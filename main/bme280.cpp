@@ -408,5 +408,7 @@ BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
     return (BME280_U32_t)pressure;
 }
 
-
+BME280_U32_t BME280::compensate_H_int32(BME280_S32_t adc_H){
+    
+}
 
