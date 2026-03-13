@@ -358,7 +358,54 @@ void BME280::set_normal_mode(void){
 }
 
 BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
+    //Create variables
+    BME280_S32_t var1, var2, temperature = 0;
 
+    //Compensation calculation from datasheet
+    //Shift raw ADC temperature to the right by 3 bits
+    BME280_S32_t shifted_adc_1 = adc_T >> 3;
+
+    //Shift calibration T1 left by 1 bit
+    BME280_S32_t shifted_T1 = ((BME280_S32_t)calibration_data.dig_T1) << 1;
+
+    //Subtract values 
+    BME280_S32_t diff1 = shifted_adc_1 - shifted_T1;
+
+    //Multiply by calibration T2
+    BME280_S32_t mult1 = diff1 * ((BME280_S32_t)calibration_data.dig_T2);
+
+    //Final shift
+    var1 = mult1 >> 11;
+
+    //Second compensation calculation
+
+    //Shift ADC temperature right by 4 bits
+    BME280_S32_t shifted_adc_2 = adc_T >> 4;
+
+    //Subtract calibration T1
+    BME280_S32_t diff2 = shifted_adc_2 - ((BME280_S32_t)calibration_data.dig_T1);
+
+    //Square the difference 
+    BME280_S32_t squared = diff2 * diff2;
+
+    //Shift results
+    BME280_S32_t shifted_sqr = squared >> 12;
+
+    //Multiply by calibration T3
+    BME280_S32_t mult2 = shifted_sqr * ((BME280_S32_t)calibration_data.dig_T3);
+
+    //Final shift 
+    var2 = mult2 >> 14;
+
+    //Combine results
+    t_fine = var1 + var2;
+
+    //Final temp calculations
+    BME280_S32_t temp_scaled = (t_fine * 5) + 128;
+
+    temperature = temp_scaled >> 8;
+
+    return temperature;
 }
 
 BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
