@@ -282,6 +282,9 @@ void BME280::burst_read_data(void){
 
     uint32_t raw_humidity = (HUM_MSB << 8) | HUM_LSB;
 
+    uint32_t raw_temperature = (temp_msb << 16) | (temp_lsb << 8) | (temp_xlsb);    // Combine the three bytes into a single 20-bit value
+    raw_temperature >>= 4; // Temperature is also 20 bits, so shift right by 4 to align
+
     //Apply compensation
     int32_t temp_comp = compensate_T_int32(raw_temperature);
     int32_t press_comp = compensate_P_int64(raw_pressure);
@@ -290,7 +293,7 @@ void BME280::burst_read_data(void){
     //Convert to floats
     temperature = temp_comp / 100.0f;        // Temperature is in hundredths of degree Celsius
     pressure = press_comp / 25600.0f;       // Pressure is in Pa, convert to hPa by dividing by 25600
-    humidity = hum_comp / 1024.0f;          // Humidity is in thousand
+    humidity = hum_comp / 1024.0f;          // Humidity is in thousands
 }
 
 void BME280::sample_data(uint8_t address, uint8_t &data){
