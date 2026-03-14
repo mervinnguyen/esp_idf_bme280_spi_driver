@@ -280,7 +280,7 @@ void BME280::burst_read_data(void){
     uint32_t temp_lsb = rx_buffer[5];
     uint32_t temp_xlsb = rx_buffer[6];
 
-    uint32_t raw_humidity = (hum_msb << 8) | hum_lsb;
+    uint32_t raw_humidity = (HUM_MSB << 8) | HUM_LSB;
 
     //Apply compensation
     int32_t temp_comp = compensate_T_int32(raw_temperature);
