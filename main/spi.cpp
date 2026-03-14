@@ -1,5 +1,5 @@
 //Standard libraries
-#include <cstdio.h>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cstdint>
