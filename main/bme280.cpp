@@ -205,7 +205,7 @@ void BME280::register_write(uint8_t address, uint8_t data){
     spi_device_release_bus(spi_dev);
 }
 
-void BME280::register_read(const uint8_t address, const uint8_t size, uint8_t *buffer){
+void BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t size){
     //Create transmit and receive buffers
     uint8_t tx_buffer[MAX_TX_BUFFER_SIZE] = {0};
     uint8_t rx_buffer[MAX_RX_BUFFER_SIZE] = {0};
