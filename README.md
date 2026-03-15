@@ -62,6 +62,73 @@ This driver implementation follows:
 
 ---
 
+## Testing
+
+Unit tests are implemented using **GoogleTest** to validate application-layer logic and data parsing.
+
+### Test Coverage
+
+Test coverage currently includes:
+
+- Register read/write operations  
+- Compensation algorithm verification  
+- SPI transfer logic validation  
+
+Tests can be executed using:
+
+```bash
+ctest
+```
+
+---
+
+## GoogleTest Host Unit Tests
+
+This project includes **host-side unit tests using GoogleTest** to validate logic that is difficult to verify directly on embedded hardware.
+
+These tests focus on validating **core algorithmic and safety-critical logic independently of the ESP32 platform**.
+
+### Test Coverage
+
+The current test suite verifies:
+
+#### BME280 Compensation Algorithms
+
+- Temperature calculation
+- Pressure calculation
+- Humidity calculation
+
+#### Buffer Safety Checks
+
+- SPI burst transfer size validation
+- Memory-safe buffer handling
+
+#### Algorithm Correctness
+
+- Ensures calibration values produce expected sensor outputs
+
+By isolating these components, the driver’s **mathematical correctness and memory safety can be verified without requiring hardware**.
+
+---
+
+## Run Tests
+
+From the repository root:
+
+```bash
+cmake -S tests -B tests/build
+cmake --build tests/build
+ctest --test-dir tests/build --output-on-failure
+```
+
+This process will:
+
+1. Configure the GoogleTest build  
+2. Compile the test suite  
+3. Execute all unit tests  
+
+---
+
 ## Notes
 
 - Default SPI mode: Mode 0 (CPOL = 0, CPHA = 0)
