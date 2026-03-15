@@ -9,15 +9,21 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "soc/clk_tree_defs.h"
+#include "esp_log.h"
 
+//local driver
 #include "bme280.hpp"
 
 extern "C" { void app_main(); }
+
+static const char *TAG = "BME280_APP";
 
 #define PIN_NUM_MISO 19
 #define PIN_NUM_MOSI 23
 #define PIN_NUM_CLK 18
 #define PIN_NUM_CS 5
+
+#define SPI_HOST SPI2_HOST
 
 // SPI Bus Configuration: Defines the GPIO pins for the SPI bus
 spi_bus_config_t buscfg = {
