@@ -16,8 +16,6 @@
 
 extern "C" { void app_main(); }
 
-static const char *TAG = "BME280_APP";
-
 #define PIN_NUM_MISO 19
 #define PIN_NUM_MOSI 23
 #define PIN_NUM_CLK 18
