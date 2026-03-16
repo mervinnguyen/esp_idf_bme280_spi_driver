@@ -8,6 +8,9 @@
 // soc.h: System-on-Chip register and peripheral definitions
 #include "soc/soc.h"
 
+// freeRTOS header
+#include "freertos/FreeRTOS.h"
+
 /**
  * @brief BME280 Constructor - Initializes the BME280 sensor with SPI interface
  * 
@@ -151,7 +154,7 @@ void BME280::clear_all_registers(void){
         // User data: NULL - No context data needed for this transaction
         .user = NULL,
         // Transmit buffer: Points to our tx_buffer containing addresses and values
-        .tx_buffer = &tx_buffer,
+        .tx_buffer = tx_buffer,
         // Receive buffer: NULL - We don't expect any response data
         .rx_buffer = NULL,
     };
