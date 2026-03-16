@@ -12,6 +12,7 @@
 #define MAX_RX_BUFFER_SIZE 32
 #define MAX_TX_BUFFER_SIZE 32
 
+//define memory mapped based addresses according to the data sheet
 #define HUM_LSB 0xFE
 #define HUM_MSB 0xFD
 #define HUM_XLSB 0xFC
