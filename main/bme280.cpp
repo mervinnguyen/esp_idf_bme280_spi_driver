@@ -29,7 +29,7 @@ BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config
     // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
     // DMA channel is set to 1 for efficient DMA-based transfers
     // This must be called before adding any devices to the bus
-    spi_bus_initialize(SPI3_HOST, bus_config, 1u);
+    spi_bus_initialize(SPI3_HOST, const spi_bus bus_config, 1u);
     
     // Register the BME280 device on the initialized SPI bus
     // This populates the spi_dev handle for all subsequent SPI transactions
