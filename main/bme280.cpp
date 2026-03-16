@@ -29,12 +29,12 @@ BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config
     // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
     // DMA channel is set to 1 for efficient DMA-based transfers
     // This must be called before adding any devices to the bus
-    spi_bus_initialize(SPI2_HOST, &bus_config, SPI_DMA_CH_AUTO);
+    spi_bus_initialize(SPI3_HOST, bus_config, 1u);
     
     // Register the BME280 device on the initialized SPI bus
     // This populates the spi_dev handle for all subsequent SPI transactions
     // The device is now ready to accept read/write commands
-    spi_bus_add_device(SPI2_HOST, &devcfg, &spi_dev);
+    spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
 
     // Retrieve calibration coefficients stored in sensor's factory-programmed NVM
     // These unique-per-sensor values are essential for converting raw readings
@@ -177,7 +177,7 @@ void BME280::register_write(uint8_t address, uint8_t data){
     uint8_t tx_buffer[2];   
 
     //Mask the address for write operations
-    tx_buffer[0] = address & REG_WRITE_ONLY;
+    tx_buffer[0] = address | REG_READ_ONLY;
 
     //Send the data from sensor to buffer
     tx_buffer[1] = data;
@@ -283,9 +283,7 @@ void BME280::burst_read_data(void){
     uint32_t temp_lsb = rx_buffer[5];
     uint32_t temp_xlsb = rx_buffer[6];
 
-    uint32_t hum_msb = rx_buffer[7];
-    uint32_t hum_lsb = rx_buffer[8];
-    uint32_t raw_humidity = (hum_msb << 8) | hum_lsb;
+    uint32_t raw_humidity = (HUM_MSB << 8) | HUM_LSB;
 
     uint32_t raw_temperature = (temp_msb << 16) | (temp_lsb << 8) | (temp_xlsb);    // Combine the three bytes into a single 20-bit value
     raw_temperature >>= 4; // Temperature is also 20 bits, so shift right by 4 to align
@@ -447,7 +445,7 @@ BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
     }
 
     //Apply raw pressure compensation
-    p = 1048576 - adc_P;
+    pressure = 1048576 - adc_P;
 
     pressure = ((pressure << 31) - var2) * 3125 / var1;
 
