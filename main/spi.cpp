@@ -39,7 +39,7 @@ spi_bus_config_t buscfg = {
     .max_transfer_sz = 32,              // Maximum transfer size in bytes (sufficient for register read/write operations)
     .flags = 0,                         // No special flags needed for standard SPI operation
     .intr_flags = 0,                    // No special interrupt flags needed for this application
-    .isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO, // Automatically assign CPU for SPI interrupts
+    .isr_cpu_id = ESP_INTR_CPU_AFFINITY_NO_AFFINITY, // No CPU affinity for SPI interrupts (handled by sch)
 };
 
 // SPI Device Interface Configuration: Defines BME280 device-specific settings
@@ -66,7 +66,7 @@ void task_forced_mode(void *pvParameters){
     BME280 bme(devcfg, buscfg, spi_dev);
 
     // Reset all BME280 registers to their default values
-    bme.clear_all_register();
+    bme.clear_all_registers();
     
     // Configure oversampling settings (1x = no oversampling, faster but less accurate)
     bme.pressure_oversample(oversample_1x);      // Set pressure oversampling to 1x
@@ -81,9 +81,9 @@ void task_forced_mode(void *pvParameters){
         vTaskDelay(1000 / portTICK_PERIOD_MS); // Wait for 1 second before the next measurement
         bme.burst_read_data(); // Read all sensor data (temperature, pressure, humidity) in one burst read
 
-        printf("Temperature: %.2f °C\n", bme.temperature()); // Print temperature in Celsius
-        printf("Pressure: %.2f hPa\n", bme.pressure() / 100.0); // Print pressure in hPa (convert from Pa)
-        printf("Humidity: %.2f %%\n", bme.humidity()); // Print humidity in percentage
+        printf("Temperature: %.2f C\n", bme.temperature); // Print temperature in Celsius
+        printf("Pressure: %.2f hPa\n", bme.pressure); // Print pressure in hPa
+        printf("Humidity: %.2f %%\n", bme.humidity); // Print humidity in percentage
 
         vTaskDelay(5000 / portTICK_PERIOD_MS); // Wait for 5 seconds before the next measurement cycle
     }
@@ -94,7 +94,7 @@ void task_normal_mode(void *pvParameters){
     spi_device_handle_t spi_dev;
     BME280 bme(devcfg, buscfg, spi_dev);
 
-    bme.clear_all_register(); // Reset all BME280 registers to their default values
+    bme.clear_all_registers(); // Reset all BME280 registers to their default values
     bme.pressure_oversample(oversample_16x);     // Set pressure oversampling to 16x for higher accuracy
     bme.humidity_oversample(oversample_16x);     // Set humidity oversampling to 16x for higher accuracy
     bme.temperature_oversample(oversample_16x);  // Set temperature oversampling to 16x for higher accuracy
@@ -102,9 +102,9 @@ void task_normal_mode(void *pvParameters){
 
     for (;;){
         bme.burst_read_data(); // Read all sensor data (temperature, pressure, humidity) in one burst read
-        printf("Temperature: %.2f °C\n", bme.temperature()); // Print temperature in Celsius
-        printf("Pressure: %.2f hPa\n", bme.pressure() / 100.0); // Print pressure in hPa (convert from Pa)
-        printf("Humidity: %.2f %%\n", bme.humidity()); // Print humidity in percentage
+        printf("Temperature: %.2f C\n", bme.temperature); // Print temperature in Celsius
+        printf("Pressure: %.2f hPa\n", bme.pressure); // Print pressure in hPa
+        printf("Humidity: %.2f %%\n", bme.humidity); // Print humidity in percentage
 
         vTaskDelay(5000 / portTICK_PERIOD_MS); // Wait for 5 seconds before the next measurement cycle
     }

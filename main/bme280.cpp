@@ -24,17 +24,17 @@
  * 
  * @note Uses VSPI_HOST (SPI3) on ESP32 with DMA channel 1 for data transfers
  */
-BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev) : dev_cfg{dev_cfg}, bus_cfg{bus_config}, spi_dev{spi_dev} 
+BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev) : dev_cfg{devcfg}, bus_cfg{bus_config}, spi_dev{spi_dev}
 {
     // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
     // DMA channel is set to 1 for efficient DMA-based transfers
     // This must be called before adding any devices to the bus
-    spi_bus_initialize(SPI3_HOST, bus_config, 1u);
+    spi_bus_initialize(SPI2_HOST, &bus_config, SPI_DMA_CH_AUTO);
     
     // Register the BME280 device on the initialized SPI bus
     // This populates the spi_dev handle for all subsequent SPI transactions
     // The device is now ready to accept read/write commands
-    spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
+    spi_bus_add_device(SPI2_HOST, &devcfg, &spi_dev);
 
     // Retrieve calibration coefficients stored in sensor's factory-programmed NVM
     // These unique-per-sensor values are essential for converting raw readings
@@ -152,11 +152,11 @@ void BME280::clear_all_registers(void){
         // RX length: 0 - This is a write-only operation (no read back)
         .rxlength = 0,
         // User data: NULL - No context data needed for this transaction
-        .user = NULL,
+        .user = nullptr,
         // Transmit buffer: Points to our tx_buffer containing addresses and values
         .tx_buffer = tx_buffer,
         // Receive buffer: NULL - We don't expect any response data
-        .rx_buffer = NULL,
+        .rx_buffer = nullptr,
     };
     
     // ===== Execute SPI Transaction =====
@@ -177,7 +177,7 @@ void BME280::register_write(uint8_t address, uint8_t data){
     uint8_t tx_buffer[2];   
 
     //Mask the address for write operations
-    tx_buffer[0] = address | REG_READ_ONLY;
+    tx_buffer[0] = address & REG_WRITE_ONLY;
 
     //Send the data from sensor to buffer
     tx_buffer[1] = data;
@@ -244,7 +244,8 @@ void BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t
 
 void BME280::burst_read_data(void){
     //First byte is the register addreess with read bit set
-    uint8_t tx_buffer = PRESS_MSB | REG_READ_ONLY;
+    uint8_t tx_buffer[9] = {0};
+    tx_buffer[0] = PRESS_MSB | REG_READ_ONLY;
 
     //Buffer to receive 9 bytes (1 dummy + 8 data bytes)
     uint8_t rx_buffer[9];
@@ -256,7 +257,7 @@ void BME280::burst_read_data(void){
 
     trans.length = 8 * 9; // 1 byte for address + 8 bytes for data
     trans.rxlength = 8 * 9; // 1 byte for address + 8 bytes for data
-    trans.tx_buffer = &tx_buffer;       // Transmit the starting register address
+    trans.tx_buffer = tx_buffer;        // Transmit the starting register address
     trans.rx_buffer = rx_buffer;        // Receive buffer for dummy byte + data bytes
 
     //Lock SPI bus
@@ -282,7 +283,9 @@ void BME280::burst_read_data(void){
     uint32_t temp_lsb = rx_buffer[5];
     uint32_t temp_xlsb = rx_buffer[6];
 
-    uint32_t raw_humidity = (HUM_MSB << 8) | HUM_LSB;
+    uint32_t hum_msb = rx_buffer[7];
+    uint32_t hum_lsb = rx_buffer[8];
+    uint32_t raw_humidity = (hum_msb << 8) | hum_lsb;
 
     uint32_t raw_temperature = (temp_msb << 16) | (temp_lsb << 8) | (temp_xlsb);    // Combine the three bytes into a single 20-bit value
     raw_temperature >>= 4; // Temperature is also 20 bits, so shift right by 4 to align
@@ -298,7 +301,7 @@ void BME280::burst_read_data(void){
     humidity = hum_comp / 1024.0f;          // Humidity is in thousands
 }
 
-void BME280::sample_data(uint8_t address, uint8_t &data){
+void BME280::sample_data(const uint8_t address, const uint8_t &data){
     //Create variable for data buffer
     uint8_t data_buffer = 0;
 
@@ -415,7 +418,7 @@ BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
 
 BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
     //Use 64-bit variables for precission (from datasheet)
-    BME280_S64_t var1, var2, p = 0;
+    BME280_S64_t var1, var2, pressure = 0;
 
     //Start with temperature compensaiton value
     var1 = (BME280_S64_t)t_fine - 128000;
@@ -444,7 +447,7 @@ BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
     }
 
     //Apply raw pressure compensation
-    pressure = 1048576 - adc_P;
+    p = 1048576 - adc_P;
 
     pressure = ((pressure << 31) - var2) * 3125 / var1;
 
@@ -464,7 +467,7 @@ BME280_U32_t BME280::compensate_H_int32(BME280_S32_t adc_H){
     BME280_S32_t humidity = 0;
 
     //Start from temperature compensation value
-    BME280_S32_T temp_comp = t_fine - 76800;
+    BME280_S32_t temp_comp = t_fine - 76800;
 
     //First part of humidity formula 
     BME280_S32_t part1 = adc_H << 14;
@@ -475,7 +478,7 @@ BME280_U32_t BME280::compensate_H_int32(BME280_S32_t adc_H){
 
     //More compensation math
     BME280_S32_t temp1 = (temp_comp * calibration_data.dig_H6) >> 10;
-    BME280_S32_t temp2 = (temp_comp * calibration_data.dig_H3) >> 11 + 32768;
+    BME280_S32_t temp2 = ((temp_comp * calibration_data.dig_H3) >> 11) + 32768;
     BME280_S32_t temp3 = ((temp1 * temp2) >> 10) + 2097152;
     BME280_S32_t temp4 = (temp3 * calibration_data.dig_H2 + 8192) >> 14;
 
