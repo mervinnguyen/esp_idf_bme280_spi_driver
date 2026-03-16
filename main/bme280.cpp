@@ -1,4 +1,3 @@
-
 #include "bme280.hpp"
 
 // ===== ESP-IDF SDK Headers =====
@@ -27,12 +26,12 @@ BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config
     // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
     // DMA channel is set to 1 for efficient DMA-based transfers
     // This must be called before adding any devices to the bus
-    spi_bus_initialize(VSPI_HOST, &buscfg, 1u);
+    spi_bus_initialize(SPI3_HOST, bus_config, 1u);
     
     // Register the BME280 device on the initialized SPI bus
     // This populates the spi_dev handle for all subsequent SPI transactions
     // The device is now ready to accept read/write commands
-    spi_bus_add_device(VSPI_HOST, &devcfg, &spi_dev);
+    spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
 
     // Retrieve calibration coefficients stored in sensor's factory-programmed NVM
     // These unique-per-sensor values are essential for converting raw readings
