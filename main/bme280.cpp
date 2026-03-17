@@ -29,7 +29,7 @@ BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config
     // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
     // DMA channel is set to 1 for efficient DMA-based transfers
     // This must be called before adding any devices to the bus
-    spi_bus_initialize(SPI3_HOST, const spi_bus bus_config, 1u);
+    spi_bus_initialize(SPI3_HOST, &bus_config, 1u);
     
     // Register the BME280 device on the initialized SPI bus
     // This populates the spi_dev handle for all subsequent SPI transactions
@@ -139,25 +139,23 @@ void BME280::clear_all_registers(void){
 
     // ===== Configure SPI Transaction =====
     // Structure defining the SPI transaction parameters for this operation
-    spi_transaction_t trans =
-    {
+    spi_transaction_t trans{};
         // Flags: No special flags needed for this write operation
-        .flags = 0,
+        trans.flags = 0;
         // Command phase: Not used in this implementation
-        .cmd = 0,
+        trans.cmd = 0;
         // Address phase: Not used in this implementation
-        .addr = 0,
+        trans.addr = 0;
         // Length: 6 bytes × 8 bits = 48 bits of data to transmit
-        .length = 8 * 6,
+        trans.length = 8 * 6;
         // RX length: 0 - This is a write-only operation (no read back)
-        .rxlength = 0,
+        trans.rxlength = 0;
         // User data: NULL - No context data needed for this transaction
-        .user = nullptr,
+        trans.user = nullptr;
         // Transmit buffer: Points to our tx_buffer containing addresses and values
-        .tx_buffer = tx_buffer,
+        trans.tx_buffer = tx_buffer;
         // Receive buffer: NULL - We don't expect any response data
-        .rx_buffer = nullptr,
-    };
+        trans.rx_buffer = nullptr;
     
     // ===== Execute SPI Transaction =====
     // Acquire exclusive access to the SPI bus

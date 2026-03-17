@@ -24,38 +24,45 @@ extern "C" { void app_main(); }
 #define SPI_HOST SPI2_HOST
 
 // SPI Bus Configuration: Defines the GPIO pins for the SPI bus
-spi_bus_config_t buscfg = {};
-    .miso_io_num = PIN_NUM_MISO,        // GPIO 19: Master In Slave Out (data from BME280)
-    .mosi_io_num = PIN_NUM_MOSI,        // GPIO 23: Master Out Slave In (data to BME280)
-    .sclk_io_num = PIN_NUM_CLK,         // GPIO 18: SPI Clock
-    .quadwp_io_num = -1,                // Quad Write Protect (not used in standard SPI)
-    .quadhd_io_num = -1,                // Quad Hold (not used in standard SPI)
-    .data4_io_num = -1,                 // Extra data line 4 (disabled - not using Quad SPI)
-    .data5_io_num = -1,                 // Extra data line 5 (disabled - not using Quad SPI)
-    .data6_io_num = -1,                 // Extra data line 6 (disabled - not using Quad SPI)
-    .data7_io_num = -1,                 // Extra data line 7 (disabled - not using Quad SPI)
-    .max_transfer_sz = 32,              // Maximum transfer size in bytes (sufficient for register read/write operations)
-    .flags = 0,                         // No special flags needed for standard SPI operation
-    .intr_flags = 0,                    // No special interrupt flags needed for this application
+spi_bus_config_t buscfg = [] {
+    spi_bus_config_t cfg{};
+    cfg.miso_io_num = PIN_NUM_MISO;        // GPIO 19: Master In Slave Out (data from BME280)
+    cfg.mosi_io_num = PIN_NUM_MOSI;        // GPIO 23: Master Out Slave In (data to BME280)
+    cfg.sclk_io_num = PIN_NUM_CLK;         // GPIO 18: SPI Clock
+    cfg.quadwp_io_num = -1;                // Quad Write Protect (not used in standard SPI)
+    cfg.quadhd_io_num = -1;                // Quad Hold (not used in standard SPI)
+    cfg.data4_io_num = -1;                 // Extra data line 4 (disabled - not using Quad SPI)
+    cfg.data5_io_num = -1;                 // Extra data line 5 (disabled - not using Quad SPI)
+    cfg.data6_io_num = -1;                 // Extra data line 6 (disabled - not using Quad SPI)
+    cfg.data7_io_num = -1;                 // Extra data line 7 (disabled - not using Quad SPI)
+    cfg.max_transfer_sz = 32;              // Maximum transfer size in bytes (sufficient for register read/write operations)
+    cfg.flags = 0;                         // No special flags needed for standard SPI operation
+    cfg.intr_flags = 0;                    // No special interrupt flags needed for this application
+    return cfg;
+}();
 
 // SPI Device Interface Configuration: Defines BME280 device-specific settings
-spi_device_interface_config_t devcfg = {};
-    .command_bits = 0,                     // No command phase (BME280 uses register address as first byte)
-    .address_bits = 0,                     // No address phase (address embedded in data)
-    .dummy_bits = 0,                       // No dummy bits needed for BME280
-    .mode = 0,                              // SPI Mode 0 (CPOL=0, CPHA=0) - correct for BME280
-    .clock_source = SPI_CLK_SRC_DEFAULT,    // Use default clock source
-    .duty_cycle_pos = 128,                  // 50% duty cycle (clock high/low equal time)
-    .cs_ena_pretrans = 1,                   // No CS enable delay before transmission
-    .cs_ena_posttrans = 0,                  // No CS enable delay after transmission
-    .clock_speed_hz = 1000000,              // 1 MHz clock speed (within BME280's 10 MHz max)
-    .input_delay_ns = 0,                    // No input delay compensation
-    .spics_io_num = PIN_NUM_CS,             // GPIO 5: Chip Select pin for BME280
-    .flags = 0,                             // No special flags (standard SPI operation)
-    .queue_size = 7,                        // Allow 7 SPI transactions to be queued
-    .pre_cb = 0,                            // No callback before transaction
-    .post_cb = 0,                           // No callback after transaction
-    .sample_point = SPI_SAMPLING_POINT_PHASE_0, // default sampling point
+spi_device_interface_config_t devcfg = [] {
+    spi_device_interface_config_t dfg{};
+    dfg.command_bits    = 0;                          // No command phase (BME280 uses register address as first byte)
+    dfg.address_bits    = 0;                          // No address phase (address embedded in data)
+    dfg.dummy_bits      = 0;                          // No dummy bits needed for BME280
+    dfg.mode            = 0;                          // SPI Mode 0 (CPOL=0, CPHA=0) - correct for BME280
+    dfg.clock_source    = SPI_CLK_SRC_DEFAULT;        // Use default clock source
+    dfg.duty_cycle_pos  = 128;                        // 50% duty cycle (clock high/low equal time)
+    dfg.cs_ena_pretrans = 1;                          // No CS enable delay before transmission
+    dfg.cs_ena_posttrans = 0;                         // No CS enable delay after transmission
+    dfg.clock_speed_hz  = 1000000;                    // 1 MHz clock speed (within BME280's 10 MHz max)
+    dfg.input_delay_ns  = 0;                          // No input delay compensation
+    dfg.spics_io_num    = PIN_NUM_CS;                 // GPIO 5: Chip Select pin for BME280
+    dfg.flags           = 0;                          // No special flags (standard SPI operation)
+    dfg.queue_size      = 7;                          // Allow 7 SPI transactions to be queued
+    dfg.pre_cb          = nullptr;                    // No callback before transaction
+    dfg.post_cb         = nullptr;                    // No callback after transaction
+    dfg.sample_point    = SPI_SAMPLING_POINT_PHASE_0; // Default sampling point
+    return dfg;
+}();
+
 
 void task_forced_mode(void *pvParameters){
     spi_device_handle_t spi_dev;
