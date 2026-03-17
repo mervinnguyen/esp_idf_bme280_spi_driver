@@ -24,7 +24,7 @@ extern "C" { void app_main(); }
 #define SPI_HOST SPI2_HOST
 
 // SPI Bus Configuration: Defines the GPIO pins for the SPI bus
-spi_bus_config_t buscfg = {
+spi_bus_config_t buscfg = {};
     .miso_io_num = PIN_NUM_MISO,        // GPIO 19: Master In Slave Out (data from BME280)
     .mosi_io_num = PIN_NUM_MOSI,        // GPIO 23: Master Out Slave In (data to BME280)
     .sclk_io_num = PIN_NUM_CLK,         // GPIO 18: SPI Clock
@@ -37,10 +37,9 @@ spi_bus_config_t buscfg = {
     .max_transfer_sz = 32,              // Maximum transfer size in bytes (sufficient for register read/write operations)
     .flags = 0,                         // No special flags needed for standard SPI operation
     .intr_flags = 0,                    // No special interrupt flags needed for this application
-};
 
 // SPI Device Interface Configuration: Defines BME280 device-specific settings
-spi_device_interface_config_t devcfg = {
+spi_device_interface_config_t devcfg = {};
     .command_bits = 0,                     // No command phase (BME280 uses register address as first byte)
     .address_bits = 0,                     // No address phase (address embedded in data)
     .dummy_bits = 0,                       // No dummy bits needed for BME280
@@ -57,7 +56,6 @@ spi_device_interface_config_t devcfg = {
     .pre_cb = 0,                            // No callback before transaction
     .post_cb = 0,                           // No callback after transaction
     .sample_point = SPI_SAMPLING_POINT_PHASE_0, // default sampling point
-};
 
 void task_forced_mode(void *pvParameters){
     spi_device_handle_t spi_dev;
