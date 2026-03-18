@@ -63,7 +63,6 @@ spi_device_interface_config_t devcfg = [] {
     return dfg;
 }();
 
-
 void task_forced_mode(void *pvParameters){
     spi_device_handle_t spi_dev;
     BME280 bme(devcfg, buscfg, spi_dev);
