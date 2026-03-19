@@ -361,6 +361,12 @@ void BME280::set_normal_mode(void){
     register_write(CTRL_MEAS, data);
 }
 
+uint8_t BME280::read_chip_id(void){
+    uint8_t id = 0;
+    register_read(CHIP_ID_REG, &id, 1);
+    return id;
+}
+
 BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
     //Create variables
     BME280_S32_t var1, var2, temperature = 0;

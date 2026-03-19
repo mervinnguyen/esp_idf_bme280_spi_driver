@@ -25,6 +25,7 @@
 #define CTRL_MEAS 0xF4
 #define REG_STATUS 0xF3
 #define CTRL_HUM 0xF2
+#define CHIP_ID_REG 0xD0
 
 #define ADDR_DIG_T1 0x88
 #define ADDR_DIG_T2 0x8A
@@ -109,6 +110,7 @@ class BME280
 		void temperature_oversample(oversample_e os);
 		void set_force_mode(void);
 		void set_normal_mode(void);
+        uint8_t read_chip_id(void);
 
         float temperature;
         float pressure;

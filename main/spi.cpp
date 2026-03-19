@@ -95,6 +95,8 @@ void task_normal_mode(void *pvParameters){
 
     spi_device_handle_t spi_dev;
     BME280 bme(devcfg, buscfg, spi_dev);
+    const uint8_t chip_id = bme.read_chip_id();
+    printf("BME280 chip ID: 0x%02X\n", chip_id);
 
     bme.clear_all_registers(); // Reset all BME280 registers to their default values
     bme.pressure_oversample(oversample_16x);     // Set pressure oversampling to 16x for higher accuracy
