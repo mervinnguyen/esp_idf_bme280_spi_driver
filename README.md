@@ -1,138 +1,119 @@
-# ESP-IDF BME280 SPI Driver (C++)
+# ESP-IDF BME280 SPI Driver
 
-## Overview
+ESP32 C++ driver for Bosch BME280 over SPI, built with ESP-IDF.
 
-A production-ready C++ driver implementation for the Bosch Sensortec BME280 environmental sensor, providing high-performance SPI communication through the ESP-IDF framework. This driver enables precision measurement of temperature, barometric pressure, and relative humidity with full support for the sensor's operational modes.
+This project includes:
+- Embedded firmware that reads temperature, pressure, and humidity from BME280
+- Host-side GoogleTest unit tests for compensation math and buffer-safety logic
 
-The architecture prioritizes modularity, performance, and maintainability, offering a clean abstraction layer over the ESP-IDF SPI master interface while maintaining minimal memory footprint and deterministic behavior suitable for embedded systems.
+## Features
 
----
+- SPI communication using ESP-IDF spi_master
+- Temperature, pressure, and humidity compensation
+- Forced-mode and normal-mode support in driver API
+- Host tests for compensation formulas and transfer safety checks
 
-## Key Features
+## Repository Layout
 
-- **Native SPI Integration**: Leverages ESP-IDF `spi_master` driver for efficient hardware communication
-- **Modern C++ Implementation**: Type-safe, RAII-compliant design with minimal runtime overhead
-- **Full Environmental Sensing**:
-  - Temperature measurement with configurable resolution
-  - Barometric pressure sensing with oversampling support
-  - Relative humidity monitoring
-- **Flexible Operating Modes**:
-  - Forced Mode: Single-shot measurements with power optimization
-  - Normal Mode: Continuous sampling with configurable standby periods
-- **Architectural Design**:
-  - Clear separation of concerns between driver abstraction and application logic
-  - Extensible class hierarchy for custom measurement profiles
-  - Thread-safe operation with proper resource management
-- **Platform Compatibility**: Validated across ESP32, ESP32-S3, and ESP32-C3 variants
+- main/: Firmware source code
+  - bme280.hpp / bme280.cpp: Sensor driver
+  - bme280_algorithms.hpp / bme280_algorithms.cpp: Pure algorithm layer
+  - spi.cpp: App entry, SPI config, and sensor task
+- tests/: Host-side GoogleTest project
+- Wiring_Diagram.md: Pin mapping and wiring details
 
----
+## Hardware
 
-## Hardware Requirements
+- ESP32 development board
+- BME280 sensor module (SPI-capable)
+- Jumper wires
 
-| Component | Specification |
-|-----------|--------------|
-| **Sensor** | Bosch Sensortec BME280 |
-| **MCU Platform** | ESP32 series (ESP32, ESP32-S3, ESP32-C3, etc.) |
-| **Communication Interface** | 4-wire SPI (up to 10 MHz) |
-| **Framework** | ESP-IDF v4.4+ |
+Default pins used in this project (defined in main/spi.cpp):
+- MISO: GPIO19
+- MOSI: GPIO23
+- SCLK: GPIO18
+- CS: GPIO5
 
----
+See Wiring_Diagram.md for full wiring instructions.
 
-## ESP32 SPI Pinout Reference
+## Firmware Behavior
 
-Below is the ESP32 SPI pin configuration used in this project.
+Current app_main starts task_normal_mode in main/spi.cpp.
 
-![ESP32 SPI Pinout](manuals/esp32_pinout.jpg)
+Normal mode configuration:
+- Oversampling: 16x for temperature, pressure, humidity
+- Output period: 5 seconds
+- UART output example:
+  - Temperature: xx.xx C
+  - Pressure: xxxx.xx hPa
+  - Humidity: xx.xx %
 
-> Ensure MOSI, MISO, SCLK, and CS are correctly mapped in your `spi_bus_config_t` and `spi_device_interface_config_t` structures inside ESP-IDF.
+## Prerequisites
 
----
+- ESP-IDF installed (this repo has been used with ESP-IDF v6.1)
+- Python environment required by ESP-IDF
+- USB serial access to ESP32 for flashing/monitoring
 
-## BME280 Datasheet
+## Build (Linux/WSL)
 
-For full register definitions, compensation formulas, timing diagrams, and electrical characteristics, refer to the official Bosch datasheet:
+From repo root:
 
-📄 **[Download BME280 Datasheet](manuals/bme280_datasheet.pdf)**
+1) Load ESP-IDF environment
+source ~/esp/esp-idf/export.sh
 
-This driver implementation follows:
-- Register map definitions
-- Calibration parameter extraction
-- Compensation algorithms for temperature, pressure, and humidity
-- Timing constraints and SPI protocol requirements
+2) Build
+idf.py build
 
----
+## Flash and Monitor
 
-## Testing
+If serial device is visible in Linux/WSL:
 
-Unit tests are implemented using **GoogleTest** to validate application-layer logic and data parsing.
+idf.py -p /dev/ttyUSB0 flash monitor
 
-### Test Coverage
+Replace /dev/ttyUSB0 with your device (sometimes /dev/ttyACM0).
 
-Test coverage currently includes:
+### WSL Note
 
-- Register read/write operations  
-- Compensation algorithm verification  
-- SPI transfer logic validation  
+If no serial ports appear in WSL, this is expected without USB passthrough.
 
-Tests can be executed using:
+Use one of these approaches:
+- Flash from Windows terminal using ESP-IDF/esptool
+- Attach USB to WSL with usbipd-win, then flash from WSL
 
-```bash
-ctest
-```
+## Host Unit Tests (GoogleTest)
 
----
+These tests validate logic without hardware.
 
-## GoogleTest Host Unit Tests
+Covered areas:
+- Temperature compensation
+- Pressure compensation
+- Humidity compensation and clamping
+- Transfer-size validation
+- Safe payload copy behavior
 
-This project includes **host-side unit tests using GoogleTest** to validate logic that is difficult to verify directly on embedded hardware.
+Run tests:
 
-These tests focus on validating **core algorithmic and safety-critical logic independently of the ESP32 platform**.
-
-### Test Coverage
-
-The current test suite verifies:
-
-#### BME280 Compensation Algorithms
-
-- Temperature calculation
-- Pressure calculation
-- Humidity calculation
-
-#### Buffer Safety Checks
-
-- SPI burst transfer size validation
-- Memory-safe buffer handling
-
-#### Algorithm Correctness
-
-- Ensures calibration values produce expected sensor outputs
-
-By isolating these components, the driver’s **mathematical correctness and memory safety can be verified without requiring hardware**.
-
----
-
-## Run Tests
-
-From the repository root:
-
-```bash
 cmake -S tests -B tests/build
 cmake --build tests/build
 ctest --test-dir tests/build --output-on-failure
-```
 
-This process will:
+## Troubleshooting
 
-1. Configure the GoogleTest build  
-2. Compile the test suite  
-3. Execute all unit tests  
+1) idf.py: command not found
+- Source ESP-IDF export script first:
+  source ~/esp/esp-idf/export.sh
 
----
+2) No serial ports found when flashing
+- Check cable/data support and board power
+- Check permissions/groups on Linux
+- If using WSL, use USB passthrough or flash from Windows
 
-## Notes
+3) Build succeeds but no sensor data
+- Verify wiring and sensor SPI mode
+- Confirm BME280 module supports SPI (not I2C-only wiring)
+- Check CS pin mapping and power (3.3V)
 
-- Default SPI mode: Mode 0 (CPOL = 0, CPHA = 0)
-- Maximum tested SPI clock: 10 MHz
-- Ensure proper pull-ups on CS and correct power sequencing (VDD/VDDIO)
+## References
 
----
+- BME280 datasheet: manuals/bme280_datasheet.pdf
+- ESP32 pinout image: manuals/esp32_pinout.jpg
