@@ -97,6 +97,7 @@ void task_read_chip_id(void *pvParameters){
     BME280 bme(devcfg, buscfg, spi_dev);
     uint8_t chip_id = bme.read_chip_id();
     printf("BME280 chip ID: 0x%02X\n", chip_id);
+    vTaskDelete(NULL);
 }
 
 void task_normal_mode(void *pvParameters){
@@ -121,7 +122,8 @@ void task_normal_mode(void *pvParameters){
 }
 
 void app_main(void){
-    //create task
+    //create tasks
+    xTaskCreate(task_read_chip_id, "task_read_chip_id", 3072, NULL, 6, NULL);
     xTaskCreate(task_normal_mode, "task_normal_mode", 4096, NULL, 5, NULL);
 
     
