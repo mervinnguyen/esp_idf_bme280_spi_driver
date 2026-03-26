@@ -73,13 +73,12 @@ From the repository root:
   source /path/to/esp-idf/export.sh
   ```
   Replace `/path/to/esp-idf/` with the location where you installed ESP-IDF (it should NOT be inside this project folder).
-  
+
 2. **Build**
   ```sh
   idf.py build
   ```
-
-idf.py -p /dev/ttyUSB0 flash monitor
+  
 ## Flash and Monitor
 
 If serial device is visible in Linux/WSL:
