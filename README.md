@@ -47,6 +47,7 @@ See `Wiring_Diagram.md` for full wiring instructions.
 The current `app_main` starts `task_normal_mode` in `main/spi.cpp`.
 
 **Normal mode configuration:**
+
 - Oversampling: 16x for temperature, pressure, humidity
 - Output period: 5 seconds
 
@@ -69,8 +70,9 @@ From the repository root:
 
 1. **Load ESP-IDF environment**
   ```sh
-  source ~/esp/esp-idf/export.sh
+  source /path/to/esp-idf/export.sh
   ```
+  Replace `/path/to/esp-idf/` with the location where you installed ESP-IDF (it should NOT be inside this project folder).
 2. **Build**
   ```sh
   idf.py build
@@ -118,7 +120,8 @@ ctest --test-dir tests/build --output-on-failure
 1. **idf.py: command not found**
   - Source ESP-IDF export script first:
     ```sh
-    source ~/esp/esp-idf/export.sh
+    source /path/to/esp-idf/export.sh
+    (Replace `/path/to/esp-idf/` with your actual ESP-IDF install location)
     ```
 2. **No serial ports found when flashing**
   - Check cable/data support and board power
