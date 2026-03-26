@@ -1,2 +1,0 @@
-source /home/mervinnguyen/esp_idf_bme280_spi_driver/build/bootloader/gdbinit/symbols
-source /home/mervinnguyen/esp_idf_bme280_spi_driver/build/bootloader/gdbinit/connect
