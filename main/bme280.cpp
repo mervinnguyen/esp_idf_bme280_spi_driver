@@ -1,61 +1,21 @@
 #include "bme280.hpp"
 
-// ===== ESP-IDF SDK Headers =====
-// spi_common.h: Common SPI driver types and functions
 #include "driver/spi_common.h"
-// spi_types.h: Hardware-specific SPI type definitions
 #include "hal/spi_types.h"
-// soc.h: System-on-Chip register and peripheral definitions
 #include "soc/soc.h"
-
-// freeRTOS header
 #include "freertos/FreeRTOS.h"
 
-/**
- * @brief BME280 Constructor - Initializes the BME280 sensor with SPI interface
- * 
- * Sets up the SPI bus and device, then acquires calibration coefficients from
- * the sensor's non-volatile memory. This constructor ensures the sensor is
- * ready for measurement operations upon completion.
- * 
- * @param devcfg SPI device interface configuration (clock speed, mode, CS pin, etc.)
- * @param bus_config SPI bus configuration (MISO, MOSI, CLK pin assignments)
- * @param spi_dev Reference to SPI device handle (populated by spi_bus_add_device)
- * 
- * @note Uses VSPI_HOST (SPI3) on ESP32 with DMA channel 1 for data transfers
- */
-BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev) : dev_cfg{devcfg}, bus_cfg{bus_config}, spi_dev{spi_dev}
-{
-    // Initialize the SPI bus with provided configuration on VSPI_HOST (SPI3)
-    // DMA channel is set to 1 for efficient DMA-based transfers
-    // This must be called before adding any devices to the bus
-    spi_bus_initialize(SPI3_HOST, &bus_config, 1u);
-    
-    // Register the BME280 device on the initialized SPI bus
-    // This populates the spi_dev handle for all subsequent SPI transactions
-    // The device is now ready to accept read/write commands
-    spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
 
-    // Retrieve calibration coefficients stored in sensor's factory-programmed NVM
-    // These unique-per-sensor values are essential for converting raw readings
-    // to accurate temperature, pressure, and humidity measurements
+BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev)
+    : dev_cfg{devcfg}, bus_cfg{bus_config}, spi_dev{spi_dev}
+{
+    spi_bus_initialize(SPI3_HOST, &bus_config, 1u);
+    spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
     get_calibration_data();
 }
 
 /**
- * @brief Retrieve calibration coefficients from BME280 non-volatile memory
- * 
- * Reads all factory-calibrated coefficients from the BME280 sensor and stores
- * them in the calibration_data structure. These coefficients are essential for
- * the compensation formulas that convert raw sensor readings to actual values.
- * 
- * The BME280 stores separate calibration coefficients for:
- * - Temperature (T1, T2, T3)
- * - Pressure (P1-P9)
- * - Humidity (H1-H6)
- * 
- * Some humidity coefficients (H4, H5) require bit-level unpacking due to
- * their non-byte-aligned storage in the sensor's memory map.
+ * @brief Retrieve calibration coefficients from BME280 non-volatile memory.
  */
 void BME280::get_calibration_data(void){
     // ===== Temperature Calibration Coefficients =====
@@ -115,108 +75,44 @@ void BME280::get_calibration_data(void){
  * @note This is a register-level reset, not a hardware reset via the reset pin
  */
 void BME280::clear_all_registers(void){
-    // ===== Prepare Transmission Buffer =====
-    // Send pairs of (register address, value) where register is write-only
-    // Each write operation is: [address with write bit, data byte]
-    // Total of 6 bytes: 3 registers × (address + data)
-    uint8_t tx_buffer[6] = 
-    {
-        // First register: CTRL_MEAS with write-only mask applied to address
-        CTRL_MEAS & REG_WRITE_ONLY,
-        // Value to write: 0x00 (puts sensor into sleep mode, disables measurements)
-        0x00,
-        
-        // Second register: CONFIG with write-only mask
-        CONFIG & REG_WRITE_ONLY,
-        // Value to write: 0x00 (sets filter off, no standby delay)
-        0x00,
-        
-        // Third register: CTRL_HUM with write-only mask
-        CTRL_HUM & REG_WRITE_ONLY,
-        // Value to write: 0x00 (humidity oversampling disabled)
-        0x00,
+    uint8_t tx_buffer[6] = {
+        CTRL_MEAS & REG_WRITE_ONLY, 0x00,
+        CONFIG & REG_WRITE_ONLY,    0x00,
+        CTRL_HUM & REG_WRITE_ONLY,  0x00,
     };
-
-    // ===== Configure SPI Transaction =====
-    // Structure defining the SPI transaction parameters for this operation
     spi_transaction_t trans{};
-        // Flags: No special flags needed for this write operation
-        trans.flags = 0;
-        // Command phase: Not used in this implementation
-        trans.cmd = 0;
-        // Address phase: Not used in this implementation
-        trans.addr = 0;
-        // Length: 6 bytes × 8 bits = 48 bits of data to transmit
-        trans.length = 8 * 6;
-        // RX length: 0 - This is a write-only operation (no read back)
-        trans.rxlength = 0;
-        // User data: NULL - No context data needed for this transaction
-        trans.user = nullptr;
-        // Transmit buffer: Points to our tx_buffer containing addresses and values
-        trans.tx_buffer = tx_buffer;
-        // Receive buffer: NULL - We don't expect any response data
-        trans.rx_buffer = nullptr;
-    
-    // ===== Execute SPI Transaction =====
-    // Acquire exclusive access to the SPI bus
-    // portMAX_DELAY ensures we wait indefinitely if needed (RTOS context)
+    trans.flags = 0;
+    trans.cmd = 0;
+    trans.addr = 0;
+    trans.length = 8 * 6;
+    trans.rxlength = 0;
+    trans.user = nullptr;
+    trans.tx_buffer = tx_buffer;
+    trans.rx_buffer = nullptr;
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-
-    // Transmit the register reset commands to the BME280 sensor
     spi_device_transmit(spi_dev, &trans);
-
-    // Release the SPI bus so other devices can use it
-    // Critical for systems with multiple SPI devices on the same bus
     spi_device_release_bus(spi_dev);
 }
 
 void BME280::register_write(uint8_t address, uint8_t data){
-    //create a transmit buffer with register addressa and data (1 byte)
-    uint8_t tx_buffer[2];   
-
-    //Mask the address for write operations
+    uint8_t tx_buffer[2];
     tx_buffer[0] = address | REG_READ_ONLY;
-
-    //Send the data from sensor to buffer
     tx_buffer[1] = data;
-
-    //Create SPI transaction structure
     spi_transaction_t trans;
-
-    //clear structure fields
     memset(&trans, 0, sizeof(spi_transaction_t));
-
-    //Number of bits to transmit (2 bytes = 16 bits)
     trans.length = 16;
-
-    //Assign transmit buffer
     trans.tx_buffer = tx_buffer;
-
-    //No receive buffer needed for writing to register
     trans.rx_buffer = 0;
-
-    //Acquire SPI bus so other tasks can't access it
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-
-    //Send transaction
     spi_device_transmit(spi_dev, &trans);
-
-    //Release SPI bus
     spi_device_release_bus(spi_dev);
 }
 
 void BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t size){
-    //Create transmit and receive buffers
     uint8_t tx_buffer[MAX_TX_BUFFER_SIZE] = {0};
     uint8_t rx_buffer[MAX_RX_BUFFER_SIZE] = {0};
-
-    //Set register address with read flag
     tx_buffer[0] = address | REG_READ_ONLY;
-
-    //Create SPI transaction struct
     spi_transaction_t trans;
-
-    //Clear the structure
     memset(&trans, 0, sizeof(spi_transaction_t));
 
     //Total bits to send and recieve (address + data)
@@ -226,52 +122,28 @@ void BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t
     //Assign buffers
     trans.tx_buffer = tx_buffer;
     trans.rx_buffer = rx_buffer;
-
-    //Acquire SPI bus for exclusive access
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-
-    //Perform SPI transaction
     spi_device_transmit(spi_dev, &trans);
-
-    //Release SPI bus
     spi_device_release_bus(spi_dev);
-
-    //Copy received data (skip first byte which is dummuy)
     memcpy(buffer, &rx_buffer[1], size);
 }
 
 void BME280::burst_read_data(void){
-    //First byte is the register addreess with read bit set
     uint8_t tx_buffer[9] = {0};
     tx_buffer[0] = PRESS_MSB | REG_READ_ONLY;
-
-    //Buffer to receive 9 bytes (1 dummy + 8 data bytes)
-    uint8_t rx_buffer[9];
-    memset(rx_buffer, 0, sizeof(rx_buffer));
-
-    //Declare trans structure
+    uint8_t rx_buffer[9] = {0};
     spi_transaction_t trans;
     memset(&trans, 0, sizeof(spi_transaction_t));
-
-    trans.length = 8 * 9; // 1 byte for address + 8 bytes for data
-    trans.rxlength = 8 * 9; // 1 byte for address + 8 bytes for data
-    trans.tx_buffer = tx_buffer;        // Transmit the starting register address
-    trans.rx_buffer = rx_buffer;        // Receive buffer for dummy byte + data bytes
-
-    //Lock SPI bus
+    trans.length = 8 * 9;
+    trans.rxlength = 8 * 9;
+    trans.tx_buffer = tx_buffer;
+    trans.rx_buffer = rx_buffer;
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-
-    //Perform the transaction
     spi_device_transmit(spi_dev, &trans);
-
-    //Release SPI bus
     spi_device_release_bus(spi_dev);
-
-    //Combine presure bytes
     uint32_t press_msb = rx_buffer[1];
     uint32_t press_lsb = rx_buffer[2];
     uint32_t press_xlsb = rx_buffer[3];
-
     uint32_t raw_pressure = (press_msb << 16) | (press_lsb << 8) | (press_xlsb);
 
     raw_pressure >>= 4; // Pressure is 20 bits, so we need to shift right by 4 to align it
@@ -280,13 +152,9 @@ void BME280::burst_read_data(void){
     uint32_t temp_msb = rx_buffer[4];
     uint32_t temp_lsb = rx_buffer[5];
     uint32_t temp_xlsb = rx_buffer[6];
-
     uint32_t raw_humidity = (HUM_MSB << 8) | HUM_LSB;
-
-    uint32_t raw_temperature = (temp_msb << 16) | (temp_lsb << 8) | (temp_xlsb);    // Combine the three bytes into a single 20-bit value
-    raw_temperature >>= 4; // Temperature is also 20 bits, so shift right by 4 to align
-
-    //Apply compensation
+    uint32_t raw_temperature = (temp_msb << 16) | (temp_lsb << 8) | (temp_xlsb);
+    raw_temperature >>= 4;
     int32_t temp_comp = compensate_T_int32(raw_temperature);
     int32_t press_comp = compensate_P_int64(raw_pressure);
     int32_t hum_comp = compensate_H_int32(raw_humidity);
@@ -298,66 +166,37 @@ void BME280::burst_read_data(void){
 }
 
 void BME280::sample_data(const uint8_t address, const uint8_t &data){
-    //Create variable for data buffer
     uint8_t data_buffer = 0;
-
-    //Read the existing data register
     register_read(address, &data_buffer, 1);
-
-    //write new data
     data_buffer |= data;
-
-    //write data over SPI
     register_write(address, data_buffer);
 }
 
 void BME280::pressure_oversample(oversample_e os){
-    //Convert the oversampling enum to a uint8_t value
     uint8_t oversample_value = (uint8_t)os;
-
-    //Shift it to correct bit position for pressure field.
     uint8_t shifted_value = oversample_value << PRESS_OVERSAMPLE_SHIFT;
-
-    //Write the updated value to the CTRL_MEAS register
     sample_data(CTRL_MEAS, shifted_value);
 }
 
 void BME280::humidity_oversample(oversample_e os){
-    //Convert the oversampling enum to a uint8_t value
     uint8_t oversample_value = (uint8_t)os;
-
-    //Shift it to correct bit position for humidity field.
     uint8_t shifted_value = oversample_value << HUM_OVERSAMPLE_SHIFT;
-
-    //Write the updated value to the CTRL_HUM register
     sample_data(CTRL_HUM, shifted_value);
-
 }
 
 void BME280::temperature_oversample(oversample_e os){
-    //Convert the oversampling enum to a uint8_t value
     uint8_t oversample_value = (uint8_t)os;
-
-    //Shift it to correct bit position for temperature field.
     uint8_t shifted_value = oversample_value << TEMP_OVERSAMPLE_SHIFT;
-
-    //Write the updated value to the CTRL_MEAS register
     sample_data(CTRL_MEAS, shifted_value);
 }
 
 void BME280::set_force_mode(void){
-    //write data
     uint8_t data = FORCED_MODE;
-
-    //write the data over SPI
     register_write(CTRL_MEAS, data);
 }
 
 void BME280::set_normal_mode(void){
-    //write data
     uint8_t data = NORMAL_MODE;
-
-    //write the data over SPI
     register_write(CTRL_MEAS, data);
 }
 
@@ -368,7 +207,6 @@ uint8_t BME280::read_chip_id(void){
 }
 
 BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
-    //Create variables
     BME280_S32_t var1, var2, temperature = 0;
 
     //Compensation calculation from datasheet
@@ -377,57 +215,38 @@ BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
 
     //Shift calibration T1 left by 1 bit
     BME280_S32_t shifted_T1 = ((BME280_S32_t)calibration_data.dig_T1) << 1;
-
-    //Subtract values 
     BME280_S32_t diff1 = shifted_adc_1 - shifted_T1;
-
-    //Multiply by calibration T2
     BME280_S32_t mult1 = diff1 * ((BME280_S32_t)calibration_data.dig_T2);
 
-    //Final shift
     var1 = mult1 >> 11;
 
     //Second compensation calculation
 
     //Shift ADC temperature right by 4 bits
     BME280_S32_t shifted_adc_2 = adc_T >> 4;
-
-    //Subtract calibration T1
     BME280_S32_t diff2 = shifted_adc_2 - ((BME280_S32_t)calibration_data.dig_T1);
 
-    //Square the difference 
     BME280_S32_t squared = diff2 * diff2;
-
-    //Shift results
     BME280_S32_t shifted_sqr = squared >> 12;
-
-    //Multiply by calibration T3
     BME280_S32_t mult2 = shifted_sqr * ((BME280_S32_t)calibration_data.dig_T3);
 
     //Final shift 
     var2 = mult2 >> 14;
-
-    //Combine results
     t_fine = var1 + var2;
 
     //Final temp calculations
     BME280_S32_t temp_scaled = (t_fine * 5) + 128;
-
     temperature = temp_scaled >> 8;
-
     return temperature;
 }
 
 BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
-    //Use 64-bit variables for precission (from datasheet)
+    //Use 64-bit variables for precision (from datasheet)
     BME280_S64_t var1, var2, pressure = 0;
 
     //Start with temperature compensaiton value
     var1 = (BME280_S64_t)t_fine - 128000;
-
-    //First part of pressure compensation
     BME280_S64_t var1_squared = var1 * var1;
-
     var2 = var1_squared * (BME280_S64_t)calibration_data.dig_P6;
     var2 += (var1 * (BME280_S64_t)calibration_data.dig_P5) << 17;
     var2 += ((BME280_S64_t)calibration_data.dig_P4) << 35;
@@ -435,47 +254,32 @@ BME280_U32_t BME280::compensate_P_int64(BME280_S32_t adc_P){
     //More compensation math
     BME280_S64_t temp1 = (var1_squared * (BME280_S64_t)calibration_data.dig_P3) >> 8;
     BME280_S64_t temp2 = (var1 * (BME280_S64_t)calibration_data.dig_P2) << 12;
-    
     var1 = temp1 + temp2;
-
     BME280_S64_t scale = ((BME280_S64_t)1 << 47) + var1;
     scale = (scale * (BME280_S64_t)calibration_data.dig_P1) >> 33;
-
     var1 = scale;
 
-    //Prevent divide by 0
     if (var1 == 0) {
-        return 0; // Avoid division by zero
+        return 0;
     }
-
-    //Apply raw pressure compensation
     pressure = 1048576 - adc_P;
-
     pressure = ((pressure << 31) - var2) * 3125 / var1;
 
     //Final fine adjustments
     BME280_S64_t pressure_shift = pressure >> 13;
-
     BME280_S64_t adjust1 = ((BME280_S64_t)calibration_data.dig_P9 * (pressure_shift * pressure_shift)) >> 25;
     BME280_S64_t adjust2 = ((BME280_S64_t)calibration_data.dig_P8 * pressure_shift) >> 19;
-
     pressure = pressure + adjust1 + adjust2;
     pressure = (pressure >> 8) + ((BME280_S64_t)calibration_data.dig_P7 << 4);
-
     return (BME280_U32_t)pressure;
 }
 
 BME280_U32_t BME280::compensate_H_int32(BME280_S32_t adc_H){
     BME280_S32_t humidity = 0;
-
-    //Start from temperature compensation value
     BME280_S32_t temp_comp = t_fine - 76800;
-
-    //First part of humidity formula 
     BME280_S32_t part1 = adc_H << 14;
     BME280_S32_t part2 = ((BME280_S32_t)calibration_data.dig_H4) << 20;
     BME280_S32_t part3 = calibration_data.dig_H5 * temp_comp;
-
     BME280_S32_t intermediate = ((part1 + part2 + part3) + 16384) >> 15;
 
     //More compensation math
@@ -483,19 +287,12 @@ BME280_U32_t BME280::compensate_H_int32(BME280_S32_t adc_H){
     BME280_S32_t temp2 = ((temp_comp * calibration_data.dig_H3) >> 11) + 32768;
     BME280_S32_t temp3 = ((temp1 * temp2) >> 10) + 2097152;
     BME280_S32_t temp4 = (temp3 * calibration_data.dig_H2 + 8192) >> 14;
-
     humidity = intermediate * temp4;
-
-    //Final correction
     BME280_S32_t correction = (((humidity >> 15) * (humidity >> 15)) >> 7) * calibration_data.dig_H1 >> 4;
-
     humidity = humidity - correction;
-
-    //Clamp results to a valid range
     if (humidity < 0){
         humidity = 0;
     }
-
     if (humidity > 419430400){
         humidity = 419430400;
     }
