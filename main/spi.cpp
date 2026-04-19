@@ -155,5 +155,6 @@ void task_normal_mode(void *pvParameters) {
 void app_main(void){
     //create tasks
     xTaskCreate(task_read_chip_id, "task_read_chip_id", 3072, NULL, 6, NULL);
-    xTaskCreate(task_normal_mode, "task_normal_mode", 4096, NULL, 5, NULL);
+    //xTaskCreate(task_normal_mode, "task_normal_mode", 4096, NULL, 5, NULL);
+    xTaskCreate(task_forced_mode, "task_forced_mode", 4096, NULL, 5, NULL);
 }
