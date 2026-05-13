@@ -140,9 +140,9 @@ void task_forced_mode(void *pvParameters) {
             continue;
         }
 
-        printf("Temperature: %.2f C\n", bme.temperature);
-        printf("Pressure: %.2f hPa\n", bme.pressure);
-        printf("Humidity: %.2f %%\n", bme.humidity);
+        ESP_LOGI(TAG, "Temperature: %.2f C", bme.temperature);
+        ESP_LOGI(TAG, "Pressure: %.2f hPa", bme.pressure);
+        ESP_LOGI(TAG, "Humidity: %.2f %%", bme.humidity);
 
         vTaskDelay(5000 / portTICK_PERIOD_MS); // Wait for 5 seconds before the next measurement cycle
     }
@@ -165,7 +165,6 @@ void task_read_chip_id(void *pvParameters) {
         ESP_LOGE(TAG, "Failed to read chip ID: %s", esp_err_to_name(ret));
     } else {
         ESP_LOGI(TAG, "BME280 chip ID: 0x%02X", chip_id);
-        printf("BME280 chip ID: 0x%02X\n", chip_id);
     }
     
     vTaskDelete(NULL);
@@ -227,17 +226,27 @@ void task_normal_mode(void *pvParameters) {
             continue;
         }
         
-        printf("Temperature: %.2f C\n", bme.temperature);
-        printf("Pressure: %.2f hPa\n", bme.pressure);
-        printf("Humidity: %.2f %%\n", bme.humidity);
+        ESP_LOGI(TAG, "Temperature: %.2f C", bme.temperature);
+        ESP_LOGI(TAG, "Pressure: %.2f hPa", bme.pressure);
+        ESP_LOGI(TAG, "Humidity: %.2f %%", bme.humidity);
 
         vTaskDelay(5000 / portTICK_PERIOD_MS); // Wait for 5 seconds before the next measurement cycle
     }
 }
 
 void app_main(void){
-    //create tasks
-    xTaskCreate(task_read_chip_id, "task_read_chip_id", 3072, NULL, 6, NULL);
+    BaseType_t ret;
+
+    ret = xTaskCreate(task_read_chip_id, "task_read_chip_id", 3072, NULL, 6, NULL);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create task_read_chip_id");
+        return;
+    }
+
     //xTaskCreate(task_normal_mode, "task_normal_mode", 4096, NULL, 5, NULL);
-    xTaskCreate(task_forced_mode, "task_forced_mode", 4096, NULL, 5, NULL);
+    ret = xTaskCreate(task_forced_mode, "task_forced_mode", 4096, NULL, 5, NULL);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create task_forced_mode");
+        return;
+    }
 }
