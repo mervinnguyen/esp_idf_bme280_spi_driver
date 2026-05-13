@@ -22,9 +22,12 @@
 #include "freertos/task.h"
 #include "soc/clk_tree_defs.h"
 #include "esp_log.h"
+#include "esp_err.h"
 
 // Local driver
 #include "bme280.hpp"
+
+static const char *TAG = "APP";
 
 extern "C" { void app_main(); }
 
@@ -33,7 +36,7 @@ extern "C" { void app_main(); }
 #define PIN_NUM_CLK  18
 #define PIN_NUM_CS    5
 
-#define SPI_HOST SPI2_HOST
+#define SPI_HOST SPI3_HOST
 
 /**
  * @brief SPI bus configuration for ESP32.
@@ -90,16 +93,52 @@ spi_device_interface_config_t devcfg = [] {
 void task_forced_mode(void *pvParameters) {
     spi_device_handle_t spi_dev;
     BME280 bme(devcfg, buscfg, spi_dev);
+    int ret;
 
-    bme.clear_all_registers();
-    bme.pressure_oversample(oversample_1x);      ///< Pressure oversampling: 1x
-    bme.humidity_oversample(oversample_1x);      ///< Humidity oversampling: 1x
-    bme.temperature_oversample(oversample_1x);   ///< Temperature oversampling: 1x
+    ret = bme.clear_all_registers();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to clear registers: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.pressure_oversample(oversample_1x);      ///< Pressure oversampling: 1x
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set pressure oversample: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.humidity_oversample(oversample_1x);      ///< Humidity oversampling: 1x
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set humidity oversample: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.temperature_oversample(oversample_1x);   ///< Temperature oversampling: 1x
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set temperature oversample: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
 
     for (;;) {
-        bme.set_force_mode();
+        ret = bme.set_force_mode();
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to set force mode: %s", esp_err_to_name(ret));
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+        
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        bme.burst_read_data();
+        
+        ret = bme.burst_read_data();
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to read sensor data: %s", esp_err_to_name(ret));
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            continue;
+        }
 
         printf("Temperature: %.2f C\n", bme.temperature);
         printf("Pressure: %.2f hPa\n", bme.pressure);
@@ -119,8 +158,16 @@ void task_forced_mode(void *pvParameters) {
 void task_read_chip_id(void *pvParameters) {
     spi_device_handle_t spi_dev;
     BME280 bme(devcfg, buscfg, spi_dev);
-    uint8_t chip_id = bme.read_chip_id();
-    printf("BME280 chip ID: 0x%02X\n", chip_id);
+    uint8_t chip_id;
+    
+    int ret = bme.read_chip_id(chip_id);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to read chip ID: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "BME280 chip ID: 0x%02X", chip_id);
+        printf("BME280 chip ID: 0x%02X\n", chip_id);
+    }
+    
     vTaskDelete(NULL);
 }
 
@@ -135,15 +182,51 @@ void task_read_chip_id(void *pvParameters) {
 void task_normal_mode(void *pvParameters) {
     spi_device_handle_t spi_dev;
     BME280 bme(devcfg, buscfg, spi_dev);
+    int ret;
 
-    bme.clear_all_registers();
-    bme.pressure_oversample(oversample_16x);     ///< Pressure oversampling: 16x
-    bme.humidity_oversample(oversample_16x);     ///< Humidity oversampling: 16x
-    bme.temperature_oversample(oversample_16x);  ///< Temperature oversampling: 16x
-    bme.set_normal_mode();
+    ret = bme.clear_all_registers();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to clear registers: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.pressure_oversample(oversample_16x);     ///< Pressure oversampling: 16x
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set pressure oversample: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.humidity_oversample(oversample_16x);     ///< Humidity oversampling: 16x
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set humidity oversample: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.temperature_oversample(oversample_16x);  ///< Temperature oversampling: 16x
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set temperature oversample: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    ret = bme.set_normal_mode();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set normal mode: %s", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
 
     for (;;) {
-        bme.burst_read_data();
+        ret = bme.burst_read_data();
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to read sensor data: %s", esp_err_to_name(ret));
+            vTaskDelay(5000 / portTICK_PERIOD_MS);
+            continue;
+        }
+        
         printf("Temperature: %.2f C\n", bme.temperature);
         printf("Pressure: %.2f hPa\n", bme.pressure);
         printf("Humidity: %.2f %%\n", bme.humidity);
