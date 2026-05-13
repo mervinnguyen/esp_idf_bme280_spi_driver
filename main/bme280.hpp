@@ -103,24 +103,24 @@ class BME280
     public:
         BME280(const spi_device_interface_config_t &dev_cfg, const spi_bus_config_t &bus_cfg, spi_device_handle_t &spi_dev);
 
-        void clear_all_registers(void);
-		void burst_read_data(void);
-		void pressure_oversample(oversample_e os);
-		void humidity_oversample(oversample_e os);
-		void temperature_oversample(oversample_e os);
-		void set_force_mode(void);
-		void set_normal_mode(void);
-        uint8_t read_chip_id(void);
+        int clear_all_registers(void);
+		int burst_read_data(void);
+		int pressure_oversample(oversample_e os);
+		int humidity_oversample(oversample_e os);
+		int temperature_oversample(oversample_e os);
+		int set_force_mode(void);
+		int set_normal_mode(void);
+        int read_chip_id(uint8_t &chip_id);
 
         float temperature;
         float pressure;
         float humidity;
 
     private:
-        void sample_data(const uint8_t address, const uint8_t &data);
-		void register_read(const uint8_t address, uint8_t *buffer, const uint8_t size);
-		void register_write(const uint8_t address, const uint8_t data);
-		void get_calibration_data(void);
+        int sample_data(const uint8_t address, const uint8_t &data);
+		int register_read(const uint8_t address, uint8_t *buffer, const uint8_t size);
+		int register_write(const uint8_t address, const uint8_t data);
+		int get_calibration_data(void);
 
         BME280_S32_t compensate_T_int32(BME280_S32_t adc_T);
 		BME280_U32_t compensate_P_int64(BME280_S32_t adc_P);
