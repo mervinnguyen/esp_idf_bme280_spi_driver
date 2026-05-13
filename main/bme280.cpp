@@ -4,25 +4,50 @@
 #include "hal/spi_types.h"
 #include "soc/soc.h"
 #include "freertos/FreeRTOS.h"
+#include "esp_err.h"
+#include "esp_log.h"
 
+static const char *TAG = "BME280";
 
 BME280::BME280(const spi_device_interface_config_t &devcfg, const spi_bus_config_t &bus_config, spi_device_handle_t &spi_dev)
     : dev_cfg{devcfg}, bus_cfg{bus_config}, spi_dev{spi_dev}
 {
-    spi_bus_initialize(SPI3_HOST, &bus_config, 1u);
-    spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
-    get_calibration_data();
+    esp_err_t ret;
+    
+    // Initialize SPI bus
+    ret = spi_bus_initialize(SPI3_HOST, &bus_config, 1u);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
+        return;
+    }
+    
+    // Add SPI device
+    ret = spi_bus_add_device(SPI3_HOST, &devcfg, &spi_dev);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to add SPI device: %s", esp_err_to_name(ret));
+        return;
+    }
+    
+    // Get calibration data
+    ret = get_calibration_data();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get calibration data: %s", esp_err_to_name(ret));
+    }
 }
 
 /**
  * @brief Retrieve calibration coefficients from BME280 non-volatile memory.
+ * @return ESP_OK on success, error code otherwise
  */
-void BME280::get_calibration_data(void){
+int BME280::get_calibration_data(void){
     // ===== Temperature Calibration Coefficients =====
     // Three 16-bit signed coefficients used in temperature compensation formula
-    register_read(ADDR_DIG_T1, (uint8_t*)&(calibration_data.dig_T1), CAL_SIZE_2_BYTE);
-    register_read(ADDR_DIG_T2, (uint8_t*)&(calibration_data.dig_T2), CAL_SIZE_2_BYTE);
-    register_read(ADDR_DIG_T3, (uint8_t*)&(calibration_data.dig_T3), CAL_SIZE_2_BYTE);
+    int ret = register_read(ADDR_DIG_T1, (uint8_t*)&(calibration_data.dig_T1), CAL_SIZE_2_BYTE);
+    if (ret != ESP_OK) return ret;
+    ret = register_read(ADDR_DIG_T2, (uint8_t*)&(calibration_data.dig_T2), CAL_SIZE_2_BYTE);
+    if (ret != ESP_OK) return ret;
+    ret = register_read(ADDR_DIG_T3, (uint8_t*)&(calibration_data.dig_T3), CAL_SIZE_2_BYTE);
+    if (ret != ESP_OK) return ret;
     
     // ===== Pressure Calibration Coefficients =====
     // Nine coefficients (P1-P9) for pressure compensation calculations
@@ -58,7 +83,11 @@ void BME280::get_calibration_data(void){
                                 (calibration_data.dig_H5 & 0xFF00)) >> 4u;
 
     // H6: Final 8-bit humidity coefficient
-    register_read(ADDR_DIG_H6, (uint8_t*)&(calibration_data.dig_H6), CAL_SIZE_1_BYTE);
+    ret = register_read(ADDR_DIG_H6, (uint8_t*)&(calibration_data.dig_H6), CAL_SIZE_1_BYTE);
+    if (ret != ESP_OK) return ret;
+    
+    ESP_LOGI(TAG, "BME280 calibration data loaded successfully");
+    return ESP_OK;
 }
 
 /**
@@ -73,8 +102,9 @@ void BME280::get_calibration_data(void){
  * sensor returns to a known idle state. Useful for recovery and re-initialization.
  * 
  * @note This is a register-level reset, not a hardware reset via the reset pin
+ * @return ESP_OK on success, error code otherwise
  */
-void BME280::clear_all_registers(void){
+int BME280::clear_all_registers(void){
     uint8_t tx_buffer[6] = {
         CTRL_MEAS & REG_WRITE_ONLY, 0x00,
         CONFIG & REG_WRITE_ONLY,    0x00,
@@ -90,13 +120,18 @@ void BME280::clear_all_registers(void){
     trans.tx_buffer = tx_buffer;
     trans.rx_buffer = nullptr;
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-    spi_device_transmit(spi_dev, &trans);
+    esp_err_t ret = spi_device_transmit(spi_dev, &trans);
     spi_device_release_bus(spi_dev);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to clear registers: %s", esp_err_to_name(ret));
+    }
+    return ret;
 }
 
-void BME280::register_write(uint8_t address, uint8_t data){
+int BME280::register_write(uint8_t address, uint8_t data){
     uint8_t tx_buffer[2];
-    tx_buffer[0] = address | REG_READ_ONLY;
+    tx_buffer[0] = address & REG_WRITE_ONLY;
     tx_buffer[1] = data;
     spi_transaction_t trans;
     memset(&trans, 0, sizeof(spi_transaction_t));
@@ -104,11 +139,21 @@ void BME280::register_write(uint8_t address, uint8_t data){
     trans.tx_buffer = tx_buffer;
     trans.rx_buffer = 0;
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-    spi_device_transmit(spi_dev, &trans);
+    esp_err_t ret = spi_device_transmit(spi_dev, &trans);
     spi_device_release_bus(spi_dev);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Register write failed at addr 0x%02X: %s", address, esp_err_to_name(ret));
+    }
+    return ret;
 }
 
-void BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t size){
+int BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t size){
+    if (buffer == nullptr || size == 0 || size > MAX_RX_BUFFER_SIZE - 1) {
+        ESP_LOGE(TAG, "Invalid register read parameters: buffer=%p, size=%d", buffer, size);
+        return ESP_ERR_INVALID_ARG;
+    }
+    
     uint8_t tx_buffer[MAX_TX_BUFFER_SIZE] = {0};
     uint8_t rx_buffer[MAX_RX_BUFFER_SIZE] = {0};
     tx_buffer[0] = address | REG_READ_ONLY;
@@ -123,12 +168,19 @@ void BME280::register_read(const uint8_t address, uint8_t *buffer, const uint8_t
     trans.tx_buffer = tx_buffer;
     trans.rx_buffer = rx_buffer;
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-    spi_device_transmit(spi_dev, &trans);
+    esp_err_t ret = spi_device_transmit(spi_dev, &trans);
     spi_device_release_bus(spi_dev);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Register read failed at addr 0x%02X: %s", address, esp_err_to_name(ret));
+        return ret;
+    }
+    
     memcpy(buffer, &rx_buffer[1], size);
+    return ESP_OK;
 }
 
-void BME280::burst_read_data(void){
+int BME280::burst_read_data(void){
     uint8_t tx_buffer[9] = {0};
     tx_buffer[0] = PRESS_MSB | REG_READ_ONLY;
     uint8_t rx_buffer[9] = {0};
@@ -139,8 +191,13 @@ void BME280::burst_read_data(void){
     trans.tx_buffer = tx_buffer;
     trans.rx_buffer = rx_buffer;
     spi_device_acquire_bus(spi_dev, portMAX_DELAY);
-    spi_device_transmit(spi_dev, &trans);
+    esp_err_t ret = spi_device_transmit(spi_dev, &trans);
     spi_device_release_bus(spi_dev);
+    
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Burst read failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
     uint32_t press_msb = rx_buffer[1];
     uint32_t press_lsb = rx_buffer[2];
     uint32_t press_xlsb = rx_buffer[3];
@@ -163,47 +220,50 @@ void BME280::burst_read_data(void){
     temperature = temp_comp / 100.0f;        // Temperature is in hundredths of degree Celsius
     pressure = press_comp / 25600.0f;       // Pressure is in Pa, convert to hPa by dividing by 25600
     humidity = hum_comp / 1024.0f;          // Humidity is in thousands
+    
+    return ESP_OK;
 }
 
-void BME280::sample_data(const uint8_t address, const uint8_t &data){
+int BME280::sample_data(const uint8_t address, const uint8_t &data){
     uint8_t data_buffer = 0;
-    register_read(address, &data_buffer, 1);
+    int ret = register_read(address, &data_buffer, 1);
+    if (ret != ESP_OK) return ret;
+    
     data_buffer |= data;
-    register_write(address, data_buffer);
+    ret = register_write(address, data_buffer);
+    return ret;
 }
 
-void BME280::pressure_oversample(oversample_e os){
+int BME280::pressure_oversample(oversample_e os){
     uint8_t oversample_value = (uint8_t)os;
     uint8_t shifted_value = oversample_value << PRESS_OVERSAMPLE_SHIFT;
-    sample_data(CTRL_MEAS, shifted_value);
+    return sample_data(CTRL_MEAS, shifted_value);
 }
 
-void BME280::humidity_oversample(oversample_e os){
+int BME280::humidity_oversample(oversample_e os){
     uint8_t oversample_value = (uint8_t)os;
     uint8_t shifted_value = oversample_value << HUM_OVERSAMPLE_SHIFT;
-    sample_data(CTRL_HUM, shifted_value);
+    return sample_data(CTRL_HUM, shifted_value);
 }
 
-void BME280::temperature_oversample(oversample_e os){
+int BME280::temperature_oversample(oversample_e os){
     uint8_t oversample_value = (uint8_t)os;
     uint8_t shifted_value = oversample_value << TEMP_OVERSAMPLE_SHIFT;
-    sample_data(CTRL_MEAS, shifted_value);
+    return sample_data(CTRL_MEAS, shifted_value);
 }
 
-void BME280::set_force_mode(void){
+int BME280::set_force_mode(void){
     uint8_t data = FORCED_MODE;
-    register_write(CTRL_MEAS, data);
+    return register_write(CTRL_MEAS, data);
 }
 
-void BME280::set_normal_mode(void){
+int BME280::set_normal_mode(void){
     uint8_t data = NORMAL_MODE;
-    register_write(CTRL_MEAS, data);
+    return register_write(CTRL_MEAS, data);
 }
 
-uint8_t BME280::read_chip_id(void){
-    uint8_t id = 0;
-    register_read(CHIP_ID_REG, &id, 1);
-    return id;
+int BME280::read_chip_id(uint8_t &chip_id){
+    return register_read(CHIP_ID_REG, &chip_id, 1);
 }
 
 BME280_S32_t BME280::compensate_T_int32(BME280_S32_t adc_T){
