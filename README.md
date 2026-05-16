@@ -70,9 +70,9 @@ From the repository root:
 
 1. **Load ESP-IDF environment**
   ```sh
-  source /path/to/esp-idf/export.sh
+  source ~/Projects/esp/esp-idf/export.sh
   ```
-  Replace `/path/to/esp-idf/` with the location where you installed ESP-IDF (it should NOT be inside this project folder).
+  Replace `/Projects/esp/esp-idf/export.sh` with the location where you installed ESP-IDF.
 
 2. **Build**
   ```sh
